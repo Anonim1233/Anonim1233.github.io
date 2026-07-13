@@ -3,787 +3,1476 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Информация о коммутаторах</title>
+<title>Инвентаризация коммутаторов</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0F2942;--blue:#1D6FA4;--blue-lt:#E8F4FD;
+  --slate:#64748B;--slate-lt:#94A3B8;--bg:#F8FAFC;--white:#ffffff;
+  --border:#E2E8F0;--ok:#10B981;--warn:#F59E0B;--err:#EF4444;
+  --ok-bg:#ECFDF5;--warn-bg:#FFFBEB;--err-bg:#FEF2F2;
+  --text:#0F172A;--text2:#475569;
+  --card-bg:#ffffff;--table-even:#FAFBFC;--table-hover:#E8F4FD;
+  --input-bg:#F8FAFC;--shadow:rgba(0,0,0,.08);
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+html.dark{
+  --bg:#0F172A;--white:#1E293B;--card-bg:#1E293B;--border:#334155;
+  --text:#E2E8F0;--text2:#94A3B8;--slate:#94A3B8;--slate-lt:#64748B;
+  --blue-lt:#0F2942;--table-even:#243045;--table-hover:#1a3050;
+  --input-bg:#243045;--shadow:rgba(0,0,0,.3);--err-bg:#2D1B1B;--warn-bg:#2D230D;--ok-bg:#0D2B1E;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;overflow:hidden;height:100vh;transition:background .2s,color .2s}
 
-:root {
-  --navy:    #0F2942;
-  --navy-2:  #163552;
-  --blue:    #1D6FA4;
-  --blue-lt: #E8F4FD;
-  --slate:   #64748B;
-  --slate-lt:#94A3B8;
-  --bg:      #F8FAFC;
-  --white:   #FFFFFF;
-  --border:  #E2E8F0;
-  --ok:      #10B981;
-  --warn:    #F59E0B;
-  --err:     #EF4444;
-  --ok-bg:   #ECFDF5;
-  --warn-bg: #FFFBEB;
-  --err-bg:  #FEF2F2;
-  --text:    #0F172A;
-  --text-2:  #475569;
-  --mono:    'IBM Plex Mono', monospace;
-  --sans:    'IBM Plex Sans', sans-serif;
-}
+/* HEADER */
+header{background:var(--navy);color:#fff;padding:0 18px;height:52px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:200;flex-shrink:0}
+.hdr-title{font-weight:600;font-size:15px;letter-spacing:.02em;white-space:nowrap}
+.gsw{position:relative;margin-left:auto}
+#gsearch{width:210px;padding:6px 10px 6px 28px;border-radius:6px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,.5)' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 8px center;color:#fff;font-family:var(--sans);font-size:13px;outline:none;transition:all .2s}
+#gsearch::placeholder{color:rgba(255,255,255,.4)}
+#gsearch:focus{border-color:rgba(255,255,255,.35);background-color:rgba(255,255,255,.13);width:250px}
+.gdrop{position:absolute;top:calc(100% + 8px);left:0;width:380px;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 28px var(--shadow);z-index:1000;max-height:360px;overflow-y:auto;display:none}
+.gdr-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s}
+.gdr-item:hover{background:var(--table-hover)}
+.gdr-item:last-child{border-bottom:none}
+.gdr-name{font-family:var(--mono);font-size:12px;color:var(--text);font-weight:600;margin-bottom:2px}
+.gdr-sub{font-size:11px;color:var(--slate)}
+.gdr-none{padding:14px;text-align:center;color:var(--slate);font-size:13px}
+.hdr-file{font-size:11px;color:#7ea8c9;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;flex-shrink:0;margin-left:12px}
+.theme-btn{background:none;border:1px solid rgba(255,255,255,.25);border-radius:6px;color:rgba(255,255,255,.8);padding:5px 8px;cursor:pointer;font-size:15px;line-height:1;transition:all .15s;flex-shrink:0}
+.theme-btn:hover{background:rgba(255,255,255,.1);color:#fff}
 
-body {
-  font-family: var(--sans);
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  font-size: 14px;
-  line-height: 1.5;
-}
+/* NAV */
+#main-nav{display:none;background:var(--card-bg);border-bottom:1px solid var(--border);flex-shrink:0;transition:background .2s}
+.nav-tabs{display:flex;padding:0 18px}
+.nav-tab{display:flex;align-items:center;gap:6px;padding:0 16px;height:42px;font-family:var(--sans);font-size:13px;font-weight:500;color:var(--slate);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all .15s;white-space:nowrap}
+.nav-tab:hover{color:var(--text)}
+.nav-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-badge{background:var(--err);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:2px}
 
-/* ── HEADER ── */
-header {
-  background: var(--navy);
-  color: #fff;
-  padding: 0 32px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 1px 0 rgba(255,255,255,.06);
-}
-header svg { flex-shrink: 0; }
-.header-title {
-  font-weight: 600;
-  font-size: 15px;
-  letter-spacing: .02em;
-}
-.header-sub {
-  font-size: 12px;
-  color: #7ea8c9;
-  font-family: var(--mono);
-  margin-left: auto;
-}
+/* UPLOAD */
+#upload-view{display:flex;align-items:center;justify-content:center;height:calc(100vh - 52px);padding:20px}
+.upload-card{background:var(--card-bg);border:2px dashed var(--border);border-radius:16px;padding:52px 68px;text-align:center;cursor:pointer;transition:all .2s;max-width:460px;width:100%}
+.upload-card:hover,.upload-card.drag{border-color:var(--blue);background:var(--blue-lt)}
+.up-icon{width:56px;height:56px;background:var(--blue-lt);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--blue)}
+.upload-card h2{font-size:17px;font-weight:600;color:var(--text);margin-bottom:7px}
+.upload-card p{color:var(--slate);font-size:13px;margin-bottom:20px}
+.upload-btn{background:var(--blue);color:#fff;font-family:var(--sans);font-size:14px;font-weight:500;padding:9px 26px;border-radius:8px;border:none;cursor:pointer}
+.upload-btn:hover{background:#1a5f8e}
+.upload-hint{margin-top:11px;font-size:11px;color:var(--slate-lt)}
+#fi{display:none}
 
-/* ── UPLOAD ── */
-#upload-view {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: calc(100vh - 56px);
-  padding: 40px 20px;
-}
-.upload-card {
-  background: var(--white);
-  border: 2px dashed var(--border);
-  border-radius: 16px;
-  padding: 64px 80px;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color .2s, background .2s;
-  max-width: 520px;
-  width: 100%;
-}
-.upload-card:hover, .upload-card.drag { border-color: var(--blue); background: var(--blue-lt); }
-.upload-icon {
-  width: 64px; height: 64px;
-  background: var(--blue-lt);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 24px;
-  transition: background .2s;
-}
-.upload-card:hover .upload-icon { background: #c8e4f7; }
-.upload-icon svg { color: var(--blue); }
-.upload-card h2 { font-size: 18px; font-weight: 600; color: var(--navy); margin-bottom: 8px; }
-.upload-card p  { color: var(--slate); font-size: 13px; margin-bottom: 28px; }
-.upload-btn {
-  display: inline-block;
-  background: var(--blue);
-  color: #fff;
-  font-family: var(--sans);
-  font-size: 14px;
-  font-weight: 500;
-  padding: 10px 28px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  transition: background .15s;
-}
-.upload-btn:hover { background: #1a5f8e; }
-#file-input { display: none; }
-.upload-hint { margin-top: 16px; font-size: 12px; color: var(--slate-lt); }
+/* MAIN */
+#main-view{display:none;flex-direction:column;height:calc(100vh - 52px - 42px)}
 
-/* ── MAIN LAYOUT ── */
-#main-view { display: none; flex-direction: column; height: calc(100vh - 56px); overflow: hidden; }
+/* EXPORT BTN */
+.export-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;font-family:var(--sans);font-size:12px;font-weight:500;background:var(--card-bg);color:var(--text2);cursor:pointer;transition:all .15s;white-space:nowrap}
+.export-btn:hover{border-color:var(--ok);color:var(--ok)}
+.export-btn.done{border-color:var(--ok);color:var(--ok);background:var(--ok-bg)}
 
-/* ── KPI STRIP ── */
-.kpi-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1px;
-  background: var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.kpi-card {
-  flex: 1 1 140px;
-  min-width: 140px;
-  background: var(--white);
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.kpi-value {
-  font-family: var(--mono);
-  font-size: 24px;
-  font-weight: 500;
-  color: var(--navy);
-  line-height: 1;
-}
-.kpi-value.warn { color: var(--warn); }
-.kpi-value.err  { color: var(--err);  }
-.kpi-label {
-  font-size: 12px;
-  color: var(--slate);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-}
+/* DASHBOARD */
+#dashboard-view{flex:1;overflow-y:auto;background:var(--bg)}
+.dash-top{background:var(--navy);color:#fff;padding:20px 26px}
+.dash-top-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#7ea8c9;margin-bottom:12px}
+.dash-kpi-row{display:flex;gap:1px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden}
+.dkpi{flex:1;padding:13px 16px;background:rgba(255,255,255,.04)}
+.dkpi-v{font-family:var(--mono);font-size:24px;font-weight:500;line-height:1;margin-bottom:3px}
+.dkpi-v.warn{color:#FCD34D}.dkpi-v.err{color:#FCA5A5}
+.dkpi-l{font-size:10px;color:#7ea8c9;text-transform:uppercase;letter-spacing:.05em}
+.dash-section{padding:20px 26px;border-bottom:1px solid var(--border)}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap;gap:8px}
+.sec-title{font-size:14px;font-weight:600;color:var(--text)}
 
-/* ── CONTENT AREA ── */
-.content {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-}
+/* Issue cards */
+.issue-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:9px}
+.issue-card{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:13px;cursor:pointer;transition:all .15s;user-select:none}
+.issue-card:hover{border-color:var(--blue);box-shadow:0 2px 10px var(--shadow);transform:translateY(-1px)}
+.issue-card.active{border-color:var(--blue);background:var(--blue-lt)}
+.ic-count{font-family:var(--mono);font-size:24px;font-weight:500;line-height:1;margin-bottom:3px}
+.ic-name{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--slate);margin-bottom:8px}
+.ic-bar{height:3px;background:var(--border);border-radius:2px;margin-bottom:4px;overflow:hidden}
+.ic-fill{height:100%;border-radius:2px;transition:width .5s}
+.ic-pct{font-size:10px;color:var(--slate-lt);font-family:var(--mono)}
 
-/* ── SIDEBAR ── */
-.sidebar {
-  width: 228px;
-  flex-shrink: 0;
-  background: var(--white);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.sidebar-search {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.sidebar-search input {
-  width: 100%;
-  padding: 7px 10px 7px 32px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-family: var(--sans);
-  font-size: 13px;
-  color: var(--text);
-  background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center;
-  outline: none;
-  transition: border-color .15s;
-}
-.sidebar-search input:focus { border-color: var(--blue); }
-.sidebar-list {
-  overflow-y: auto;
-  flex: 1;
-  padding: 4px 0;
-}
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  cursor: pointer;
-  transition: background .1s;
-  border-left: 3px solid transparent;
-  font-size: 13px;
-}
-.sidebar-item:hover { background: var(--bg); }
-.sidebar-item.active {
-  background: var(--blue-lt);
-  border-left-color: var(--blue);
-  color: var(--blue);
-  font-weight: 600;
-}
-.sidebar-item .obj-name { flex: 1; font-family: var(--mono); font-size: 12px; }
-.sidebar-item .obj-count {
-  font-size: 11px;
-  color: var(--slate-lt);
-  font-family: var(--mono);
-}
-.status-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.dot-ok   { background: var(--ok);   }
-.dot-warn { background: var(--warn); }
-.dot-err  { background: var(--err);  }
+/* Charts */
+.charts-row{display:grid;grid-template-columns:240px 1fr;gap:12px;align-items:start}
+.chart-card{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px}
+.chart-card h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);margin-bottom:12px}
 
-/* ── TABLE PANEL ── */
-.table-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.table-toolbar {
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--white);
-  flex-shrink: 0;
-}
-.toolbar-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--navy);
-  font-family: var(--mono);
-  margin-right: auto;
-}
-.toolbar-search {
-  padding: 6px 10px 6px 30px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-family: var(--sans);
-  font-size: 13px;
-  color: var(--text);
-  background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E") no-repeat 9px center;
-  width: 200px;
-  outline: none;
-  transition: border-color .15s;
-}
-.toolbar-search:focus { border-color: var(--blue); }
-.filter-btn {
-  padding: 6px 14px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-family: var(--sans);
-  font-size: 13px;
-  background: var(--white);
-  cursor: pointer;
-  transition: all .15s;
-  color: var(--text-2);
-}
-.filter-btn:hover { border-color: var(--blue); color: var(--blue); }
-.filter-btn.active { background: var(--err-bg); border-color: var(--err); color: var(--err); }
+/* Model & port sections */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.model-table{width:100%;font-size:12px;border-collapse:collapse}
+.model-table th{background:var(--bg);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--slate);padding:7px 10px;text-align:left;border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0}
+.model-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text)}
+.model-table tr:hover td{background:var(--table-hover)}
+.port-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:16px}
+.pkpi{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.pkpi-v{font-family:var(--mono);font-size:20px;font-weight:500;line-height:1;margin-bottom:3px}
+.pkpi-l{font-size:10px;color:var(--slate);text-transform:uppercase;letter-spacing:.06em}
+.port-obj-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.port-obj-row:last-child{border-bottom:none}
+.port-obj-name{font-family:var(--mono);font-size:11px;color:var(--text);width:72px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis}
+.port-obj-bar{flex:1;height:9px;background:var(--border);border-radius:4px;overflow:hidden}
+.port-obj-fill{height:100%;border-radius:4px}
+.port-obj-pct{font-family:var(--mono);font-size:11px;width:34px;text-align:right;flex-shrink:0}
 
-.table-wrap {
-  overflow: auto;
-  flex: 1;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-thead th {
-  background: var(--navy);
-  color: #CBD5E1;
-  font-weight: 500;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  padding: 10px 14px;
-  white-space: nowrap;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  text-align: left;
-  border-right: 1px solid rgba(255,255,255,.06);
-  cursor: pointer;
-  user-select: none;
-}
-thead th:hover { color: #fff; }
-thead th.sorted { color: #7CC8F2; }
-thead th.sorted::after { content: ' ↑'; }
-thead th.sorted.desc::after { content: ' ↓'; }
+/* Chips */
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px}
+.chip{padding:3px 11px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--card-bg);cursor:pointer;transition:all .15s;color:var(--slate)}
+.chip:hover{border-color:var(--blue);color:var(--blue)}
+.chip.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.dash-search{padding:5px 9px 5px 27px;border:1px solid var(--border);border-radius:6px;font-family:var(--sans);font-size:12px;color:var(--text);background:var(--input-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 7px center;outline:none;width:190px}
+.dash-search:focus{border-color:var(--blue)}
+.d-count{font-size:11px;color:var(--slate);font-family:var(--mono)}
 
-tbody tr {
-  border-bottom: 1px solid var(--border);
-  border-left: 3px solid transparent;
-  transition: background .1s;
-}
-tbody tr:hover { background: var(--blue-lt) !important; }
-tbody tr:nth-child(even) { background: #FAFBFC; }
-tbody tr.row-warn { border-left-color: var(--warn); background: var(--warn-bg); }
-tbody tr.row-err  { border-left-color: var(--err);  background: var(--err-bg);  }
-tbody tr.row-warn:hover, tbody tr.row-err:hover { background: var(--blue-lt) !important; }
+/* KPI STRIP */
+.kpi-strip{display:flex;flex-wrap:wrap;gap:1px;background:var(--border);border-bottom:1px solid var(--border);flex-shrink:0}
+.kpi-card{flex:1 1 110px;background:var(--card-bg);padding:11px 14px;display:flex;flex-direction:column;gap:2px;transition:background .2s}
+.kpi-v{font-family:var(--mono);font-size:19px;font-weight:500;color:var(--text);line-height:1}
+.kpi-v.warn{color:var(--warn)}.kpi-v.err{color:var(--err)}
+.kpi-l{font-size:10px;color:var(--slate);font-weight:500;text-transform:uppercase;letter-spacing:.05em}
 
-td {
-  padding: 8px 14px;
-  vertical-align: top;
-  color: var(--text-2);
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-td.mono { font-family: var(--mono); font-size: 12px; color: var(--navy); }
-td.ip   { font-family: var(--mono); font-size: 12px; color: #1D6FA4; }
-td.switch-name { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--navy); }
-td.missing { color: #CBD5E1; font-style: italic; font-size: 12px; }
+/* OBJECTS VIEW */
+#objects-view{display:none;flex-direction:column;flex:1;min-height:0}
+.content{display:flex;flex:1;min-height:0}
+.sidebar{width:210px;flex-shrink:0;background:var(--card-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:background .2s}
+.sb-search{padding:9px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sb-inp{width:100%;padding:5px 8px 5px 26px;border:1px solid var(--border);border-radius:6px;font-family:var(--sans);font-size:12px;color:var(--text);background:var(--input-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 7px center;outline:none;transition:border-color .15s}
+.sb-inp:focus{border-color:var(--blue)}
+.sb-list{overflow-y:auto;flex:1;padding:2px 0}
+.sb-item{display:flex;align-items:center;gap:7px;padding:6px 10px;cursor:pointer;transition:background .1s;border-left:3px solid transparent;font-size:12px}
+.sb-item:hover{background:var(--table-hover)}
+.sb-item.active{background:var(--blue-lt);border-left-color:var(--blue);color:var(--blue);font-weight:600}
+.sb-item .sbn{flex:1;font-family:var(--mono)}
+.sb-item .sbc{font-size:10px;color:var(--slate-lt);font-family:var(--mono)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dok{background:var(--ok)}.dwarn{background:var(--warn)}.derr{background:var(--err)}
+.tpanel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{padding:8px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;background:var(--card-bg);flex-shrink:0;flex-wrap:wrap;transition:background .2s}
+.tbar-title{font-size:13px;font-weight:600;color:var(--text);font-family:var(--mono);margin-right:auto}
+.row-count{font-size:11px;color:var(--slate);font-family:var(--mono);flex-shrink:0}
+.tb-search{padding:5px 8px 5px 25px;border:1px solid var(--border);border-radius:6px;font-family:var(--sans);font-size:12px;color:var(--text);background:var(--input-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 7px center;width:150px;outline:none}
+.tb-search:focus{border-color:var(--blue)}
+.tbtn{padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--sans);font-size:12px;background:var(--card-bg);cursor:pointer;transition:all .15s;color:var(--text2);white-space:nowrap}
+.tbtn:hover{border-color:var(--blue);color:var(--blue)}
+.tbtn.active{background:var(--err-bg);border-color:var(--err);color:var(--err)}
 
-.badge {
-  display: inline-block;
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: 500;
-  white-space: normal;
-  line-height: 1.4;
-  max-width: 260px;
-}
-.badge-warn { background: #FEF3C7; color: #92400E; }
-.badge-err  { background: #FEE2E2; color: #991B1B; }
+/* TABLE */
+.tw{overflow:auto;flex:1}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:var(--navy);color:#CBD5E1;font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:.07em;padding:8px 10px;white-space:nowrap;position:sticky;top:0;z-index:10;text-align:left;border-right:1px solid rgba(255,255,255,.06);cursor:pointer;user-select:none}
+thead th:hover{color:#fff}
+thead th.sorted{color:#7CC8F2}
+thead th.sorted::after{content:' \u2191'}
+thead th.sorted.desc::after{content:' \u2193'}
+tbody tr{border-bottom:1px solid var(--border);border-left:3px solid transparent;transition:background .1s}
+tbody tr:hover{background:var(--table-hover)!important}
+tbody tr:nth-child(even){background:var(--table-even)}
+tbody tr.rwarn{border-left-color:var(--warn);background:var(--warn-bg)}
+tbody tr.rerr{border-left-color:var(--err);background:var(--err-bg)}
+td{padding:6px 10px;vertical-align:middle;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+td.mono{font-family:var(--mono);color:var(--text)}
+td.ip{font-family:var(--mono);color:var(--blue)}
+td.sw{font-family:var(--mono);font-weight:600;color:var(--text)}
+td.miss{color:var(--slate-lt);font-style:italic}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;max-width:280px;white-space:normal;line-height:1.4}
+.bwarn{background:#FEF3C7;color:#92400E}.berr{background:#FEE2E2;color:#991B1B}
+html.dark .bwarn{background:#3D2D0A;color:#FCD34D}
+html.dark .berr{background:#3D1212;color:#FCA5A5}
+.obj-comp{display:flex;align-items:center;gap:7px}
+.bar-track{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px}
+.cpct{font-family:var(--mono);font-size:10px;color:var(--slate-lt);width:28px}
+.cnt-ok{color:var(--ok);font-family:var(--mono);font-weight:500}
+.cnt-warn{color:var(--warn);font-family:var(--mono);font-weight:500}
+.cnt-err{color:var(--err);font-family:var(--mono);font-weight:500}
+.mini-util{display:flex;align-items:center;gap:5px}
+.mini-bar{width:44px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;flex-shrink:0}
+.mini-fill{height:100%;border-radius:3px}
+.mini-pct{font-size:10px;font-family:var(--mono);color:var(--slate);width:26px}
+.port-cell{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.port-up{color:var(--ok);font-weight:600}
+.port-dn{color:var(--slate)}
 
-/* ── SUMMARY TABLE ── */
-#summary-table th:first-child { width: 80px; }
-.obj-completeness {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.bar-track {
-  flex: 1;
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width .4s ease;
-}
+/* DETAIL CARD */
+#card-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:none;opacity:0;transition:opacity .22s}
+#card-overlay.open{opacity:1}
+#detail-card{position:fixed;top:0;right:0;width:370px;height:100vh;background:var(--card-bg);z-index:301;overflow-y:auto;box-shadow:-8px 0 40px rgba(0,0,0,.2);display:none;transform:translateX(100%);transition:transform .24s ease,background .2s}
+#detail-card.open{transform:translateX(0)}
+.chdr{background:var(--navy);color:#fff;padding:16px 18px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.csw{font-family:var(--mono);font-size:14px;font-weight:500;margin-bottom:3px}
+.cobj{font-size:11px;color:#7ea8c9}
+.cx{background:none;border:none;color:rgba(255,255,255,.6);font-size:22px;cursor:pointer;padding:0;line-height:1;flex-shrink:0}
+.cx:hover{color:#fff}
+.csec{padding:13px 18px;border-bottom:1px solid var(--border)}
+.csec-t{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--slate-lt);margin-bottom:9px}
+.cf{display:flex;gap:9px;margin-bottom:8px;align-items:baseline}
+.cf:last-child{margin-bottom:0}
+.cfl{font-size:11px;color:var(--slate);width:88px;flex-shrink:0}
+.cfv{font-size:13px;color:var(--text);font-weight:500;word-break:break-all}
+.cfv.mono{font-family:var(--mono);font-size:11px}
+.cfv.ip{font-family:var(--mono);font-size:12px;color:var(--blue)}
+.cfv.miss{color:var(--slate-lt);font-style:italic;font-weight:400;font-size:12px}
+.cfv.err{color:var(--err);font-size:11px}
+.pbar{height:10px;background:var(--border);border-radius:5px;overflow:hidden;margin:8px 0}
+.pbar-fill{height:100%;border-radius:5px;transition:width .4s}
+.pnums{display:flex;justify-content:space-between;font-size:12px;font-family:var(--mono)}
 
-/* ── STATUS COUNTS in summary ── */
-.count-ok   { color: var(--ok);  font-family: var(--mono); font-weight: 500; }
-.count-warn { color: var(--warn); font-family: var(--mono); font-weight: 500; }
-.count-err  { color: var(--err);  font-family: var(--mono); font-weight: 500; }
+/* DUPES */
+#dupes-view{flex:1;overflow-y:auto;background:var(--bg);display:none}
+.dup-top{background:var(--navy);color:#fff;padding:20px 26px}
+.dup-kpi-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.dup-kpi{flex:1 1 160px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:13px 16px}
+.dup-kpi-v{font-family:var(--mono);font-size:24px;font-weight:500;line-height:1;margin-bottom:3px}
+.dup-kpi-v.ok{color:#6EE7B7}.dup-kpi-v.err{color:#FCA5A5}
+.dup-kpi-l{font-size:10px;color:#7ea8c9;text-transform:uppercase;letter-spacing:.06em}
+.dup-section{padding:20px 26px;border-bottom:1px solid var(--border)}
+.dup-sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.dup-field-name{font-size:14px;font-weight:600;color:var(--text)}
+.dup-cnt-badge{background:var(--err-bg);color:var(--err);font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px}
+.sw-chip{display:inline-block;font-family:var(--mono);font-size:10px;background:var(--blue-lt);color:var(--blue);padding:1px 6px;border-radius:4px;margin:1px}
+.dup-ok{text-align:center;padding:56px 20px}
 
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
-
-/* ── STAT BADGE in toolbar ── */
-.row-count {
-  font-size: 12px;
-  color: var(--slate);
-  font-family: var(--mono);
-  flex-shrink: 0;
-}
-
-/* ── TOOLTIP ── */
-td[title] { cursor: default; }
+/* MISC */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#94A3B8}
+html.dark ::-webkit-scrollbar-thumb{background:#334155}
+/* TICKET MODAL */
+#ticket-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:400;display:none;opacity:0;transition:opacity .2s}
+#ticket-overlay.open{opacity:1}
+#ticket-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-54%);width:560px;max-width:95vw;background:var(--card-bg);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);z-index:401;display:none;flex-direction:column;max-height:88vh;opacity:0;transition:opacity .2s,transform .22s}
+#ticket-modal.open{opacity:1;transform:translate(-50%,-50%)}
+.tkt-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.tkt-hdr-left{display:flex;flex-direction:column;gap:2px}
+.tkt-title{font-size:14px;font-weight:600;color:var(--text)}
+.tkt-sub{font-size:11px;color:var(--slate)}
+#ticket-text{flex:1;padding:16px 18px;border:none;resize:none;font-family:var(--mono);font-size:12px;line-height:1.6;color:var(--text);background:var(--bg);outline:none;min-height:300px}
+.tkt-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.tkt-copy-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 16px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
+.tkt-copy-btn:hover{background:#1a5f8e}
+.tkt-copy-btn.ok{background:var(--ok)}
+.ticket-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border:1px solid var(--blue);border-radius:6px;font-family:var(--sans);font-size:12px;font-weight:500;color:var(--blue);background:var(--blue-lt);cursor:pointer;transition:all .15s;width:100%}
+.ticket-btn:hover{background:var(--blue);color:#fff}
+/* ── MOBILE SIDEBAR TOGGLE ── */
+.mob-sb-btn{display:none;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--border);border-radius:6px;background:var(--card-bg);cursor:pointer;font-size:16px;flex-shrink:0;color:var(--text2)}
+.mob-sb-btn:hover{border-color:var(--blue);color:var(--blue)}
+#mob-sb-overlay{display:none;position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:40}
 
 /* ── RESPONSIVE ── */
-@media (max-width: 900px) {
-  .sidebar { width: 180px; }
-  .kpi-value { font-size: 22px; }
-  .kpi-card { padding: 14px 16px; }
+/* Wide desktop — bigger charts */
+@media (min-width: 1400px){
+  .dash-kpi-row{gap:1px}
+  .dkpi-v{font-size:28px}
+  .chart-card h3{font-size:11px}
 }
 
-/* Loading */
-.spinner {
-  width: 36px; height: 36px;
-  border: 3px solid var(--border);
-  border-top-color: var(--blue);
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
-  margin: 0 auto 12px;
+/* Tablet (≤1100px) */
+@media (max-width: 1100px){
+  .charts-row{grid-template-columns:1fr}
+  .two-col{grid-template-columns:1fr}
+  .port-kpis{grid-template-columns:repeat(2,1fr)}
+  #detail-card{width:320px}
+  #ticket-modal{width:min(520px,96vw)}
+  .model-stats-inner{grid-template-columns:1fr !important}
+  .model-chart-col{display:none}
 }
-@keyframes spin { to { transform: rotate(360deg); } }
-.loading-msg { color: var(--slate); font-size: 14px; }
+
+/* Narrow tablet (≤900px) */
+@media (max-width: 900px){
+  .sidebar{width:180px}
+  .dash-kpi-row{display:grid;grid-template-columns:repeat(3,1fr)}
+  .dkpi-v{font-size:20px}
+  .issue-grid{grid-template-columns:repeat(3,1fr)}
+  .port-kpis{grid-template-columns:repeat(2,1fr)}
+  .kpi-strip{grid-template-columns:repeat(5,1fr)}
+  .kpi-v{font-size:16px}
+}
+
+/* Mobile (≤640px) */
+@media (max-width: 640px){
+  /* Header */
+  header{padding:0 10px;gap:7px;height:48px}
+  .hdr-title{font-size:13px}
+  .hdr-file{display:none}
+  .gsw{display:none !important}
+  #main-view{height:calc(100vh - 48px - 40px)}
+
+  /* Nav tabs — scroll horizontal, text small */
+  #main-nav{overflow-x:auto}
+  .nav-tabs{padding:0 6px;gap:0;min-width:max-content}
+  .nav-tab{padding:0 12px;font-size:12px;height:40px;gap:4px}
+  .nav-tab svg{width:12px;height:12px}
+
+  /* Dashboard top bar */
+  .dash-top{padding:12px}
+  .dash-kpi-row{display:grid;grid-template-columns:repeat(2,1fr);gap:1px}
+  .dkpi{padding:10px 12px}
+  .dkpi-v{font-size:18px}
+  .dkpi-l{font-size:9px}
+
+  /* Dashboard sections */
+  .dash-section{padding:12px}
+  .sec-hdr{flex-direction:column;align-items:flex-start;gap:8px}
+  .issue-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .ic-count{font-size:20px}
+  .ic-name{font-size:9px}
+  .charts-row{grid-template-columns:1fr}
+  .two-col{grid-template-columns:1fr}
+  .port-kpis{grid-template-columns:repeat(2,1fr);gap:7px}
+  .pkpi{padding:10px 12px}
+  .pkpi-v{font-size:18px}
+  .model-chart-col{display:none}
+  .model-stats-inner{grid-template-columns:1fr !important}
+  .chips{gap:5px}
+  .chip{font-size:11px;padding:3px 9px}
+  .dash-search{width:150px}
+
+  /* KPI strip — 2 columns */
+  .kpi-strip{display:grid;grid-template-columns:repeat(2,1fr)}
+  .kpi-card{padding:9px 12px}
+  .kpi-v{font-size:16px}
+  .kpi-l{font-size:9px}
+
+  /* Sidebar — hidden drawer */
+  .mob-sb-btn{display:flex}
+  .content{position:relative;overflow:hidden}
+  .sidebar{
+    position:absolute;top:0;left:-215px;height:100%;
+    z-index:50;transition:left .25s ease;box-shadow:none;width:210px
+  }
+  .sidebar.mob-open{left:0;box-shadow:4px 0 24px rgba(0,0,0,.22)}
+  #mob-sb-overlay{display:block;opacity:0;pointer-events:none;transition:opacity .25s}
+  #mob-sb-overlay.visible{opacity:1;pointer-events:auto}
+
+  /* Toolbar */
+  .toolbar{padding:7px 9px;gap:5px}
+  .tbar-title{font-size:12px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row-count{display:none}
+  .tb-search{width:110px}
+  .tbtn{font-size:11px;padding:4px 8px}
+  .export-btn{font-size:11px;padding:4px 9px}
+  #batch-ticket-btn{font-size:11px;padding:4px 8px}
+
+  /* Table */
+  thead th{font-size:9px;padding:7px 8px;letter-spacing:.04em}
+  td{font-size:11px;padding:5px 8px;max-width:110px}
+
+  /* Detail card — full screen */
+  #detail-card{width:100%;box-shadow:none}
+  .chdr{padding:14px}
+  .csec{padding:12px 14px}
+
+  /* Ticket modal — slide up */
+  #ticket-modal{
+    width:100%;max-width:100vw;
+    height:92vh;max-height:92vh;
+    top:auto;bottom:0;left:0;
+    transform:translate(0,100%);
+    border-radius:14px 14px 0 0
+  }
+  #ticket-modal.open{transform:translate(0,0)}
+  #ticket-text{font-size:11px}
+
+  /* Dupes */
+  .dup-top{padding:12px}
+  .dup-kpi-row{gap:7px}
+  .dup-section{padding:12px}
+  .dup-kpi{padding:10px 12px}
+  .dup-kpi-v{font-size:20px}
+}
+
+/* Very small phones (≤380px) */
+@media (max-width: 380px){
+  .issue-grid{grid-template-columns:1fr}
+  .nav-tab span{display:none}
+  .nav-tab{padding:0 8px}
+  .dash-kpi-row{grid-template-columns:1fr}
+  .dkpi{padding:8px 10px}
+}
+/* ── COPY IP ── */
+.copy-ip-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:none;background:none;cursor:pointer;color:var(--slate-lt);font-size:13px;padding:0;margin-left:3px;border-radius:3px;transition:color .15s;vertical-align:middle;flex-shrink:0}
+.copy-ip-btn:hover{color:var(--blue)}
+.copy-ip-btn.ok{color:var(--ok)!important}
+/* ── DONE STATUS ── */
+.done-check{width:15px;height:15px;cursor:pointer;accent-color:var(--ok);flex-shrink:0}
+tbody tr.is-done{opacity:.42}
+tbody tr.is-done .sw{text-decoration:line-through;color:var(--slate-lt)!important}
+.done-counter{font-size:11px;font-family:var(--mono);font-weight:600;padding:3px 10px;border-radius:12px;background:var(--ok-bg);color:var(--ok)}
+.done-toggle-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--card-bg);font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;color:var(--text2);white-space:nowrap}
+.done-toggle-btn:hover{border-color:var(--ok);color:var(--ok)}
+.done-toggle-btn.active{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+/* ── NOTES ── */
+.has-note{color:var(--blue);font-size:11px;margin-left:4px;cursor:default;opacity:.8}
+.note-area{width:100%;min-height:72px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--sans);font-size:12px;color:var(--text);background:var(--bg);resize:vertical;outline:none;transition:border-color .15s;line-height:1.5}
+.note-area:focus{border-color:var(--blue)}
+.note-hint{font-size:9px;color:var(--slate-lt);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px}
 </style>
 </head>
 <body>
-
-<!-- HEADER -->
 <header>
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7CC8F2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7CC8F2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/>
     <line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>
     <line x1="10" y1="6" x2="14" y2="6"/><line x1="10" y1="18" x2="14" y2="18"/>
   </svg>
-  <span class="header-title">Информация о коммутаторах</span>
-  <span class="header-sub" id="header-file">— загрузите файл —</span>
+  <span class="hdr-title">Инвентаризация коммутаторов</span>
+  <div class="gsw" id="gsw" style="display:none">
+    <input type="text" id="gsearch" placeholder="Поиск по всей базе…" oninput="globalSearch(this.value)" onfocus="showGDrop()"/>
+    <div class="gdrop" id="gdrop"></div>
+  </div>
+  <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Тёмная тема">🌙</button>
+  <span class="hdr-file" id="hdr-file">— загрузите файл —</span>
 </header>
 
-<!-- UPLOAD VIEW -->
+<nav id="main-nav">
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchView('dashboard')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Дашборд
+    </button>
+    <button class="nav-tab" onclick="switchView('objects')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>
+      Объекты
+    </button>
+    <button class="nav-tab" onclick="switchView('dupes')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="4"/><circle cx="16" cy="16" r="4"/><line x1="11" y1="11" x2="13" y2="13"/></svg>
+      Дубли SN<span class="tab-badge" id="dup-badge" style="display:none">0</span>
+    </button>
+  </div>
+</nav>
+
 <div id="upload-view">
   <div class="upload-card" id="drop-zone">
-    <div class="upload-icon">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
+    <div class="up-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
         <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/>
       </svg>
     </div>
     <h2>Загрузите Excel-файл</h2>
-    <p>Перетащите файл сюда или нажмите кнопку ниже.<br/>Поддерживается формат .xlsx</p>
-    <button class="upload-btn" onclick="document.getElementById('file-input').click()">Выбрать файл</button>
-    <input type="file" id="file-input" accept=".xlsx,.xls"/>
+    <p>Перетащите файл сюда или нажмите кнопку<br/>Поддерживается формат .xlsx</p>
+    <button class="upload-btn" onclick="document.getElementById('fi').click()">Выбрать файл</button>
+    <input type="file" id="fi" accept=".xlsx,.xls" style="display:none"/>
     <p class="upload-hint">Данные обрабатываются локально — файл никуда не отправляется</p>
   </div>
 </div>
 
-<!-- MAIN VIEW -->
 <div id="main-view">
-  <!-- KPI Strip -->
-  <div class="kpi-strip" id="kpi-strip"></div>
-
-  <div class="content">
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <div class="sidebar-search">
-        <input type="text" id="sidebar-search" placeholder="Поиск объекта…" oninput="filterSidebar(this.value)"/>
-      </div>
-      <div class="sidebar-list" id="sidebar-list"></div>
+  <div id="dashboard-view">
+    <div class="dash-top">
+      <div class="dash-top-lbl">Общий статус</div>
+      <div class="dash-kpi-row" id="dash-kpi-row"></div>
     </div>
-
-    <!-- Table Panel -->
-    <div class="table-panel">
-      <div class="table-toolbar">
-        <span class="toolbar-title" id="toolbar-title">Все объекты — сводка</span>
-        <span class="row-count" id="row-count"></span>
-        <input type="text" class="toolbar-search" id="table-search" placeholder="Поиск в таблице…" oninput="applyTableFilter()"/>
-        <button class="filter-btn" id="issues-btn" onclick="toggleIssuesFilter()">⚠ Только с замечаниями</button>
-      </div>
-      <div class="table-wrap" id="table-wrap"></div>
+    <div class="dash-section">
+      <div class="sec-hdr"><span class="sec-title">Замечания по категориям</span><span style="font-size:11px;color:var(--slate)">Нажмите — фильтрует таблицу ниже</span></div>
+      <div class="issue-grid" id="issue-cards"></div>
     </div>
+    <div class="dash-section">
+      <div class="sec-title" style="margin-bottom:12px">Аналитика</div>
+      <div class="charts-row">
+        <div class="chart-card"><h3>Состояние</h3><div style="position:relative;height:200px"><canvas id="donut-c"></canvas></div></div>
+        <div class="chart-card"><h3>Топ-15 объектов по числу проблем</h3><div style="position:relative;height:300px"><canvas id="bar-c"></canvas></div></div>
+      </div>
+    </div>
+    <div class="dash-section">
+      <div class="sec-hdr"><span class="sec-title">Статистика по моделям SW</span><span class="d-count" id="model-lbl"></span></div>
+      <div style="display:grid;grid-template-columns:1fr 230px;gap:12px;align-items:start" class="model-stats-inner">
+        <div style="border:1px solid var(--border);border-radius:10px;overflow:auto;max-height:300px"><div id="model-table-wrap"></div></div>
+        <div class="chart-card model-chart-col"><h3>Распределение</h3><div style="position:relative;height:260px"><canvas id="model-c"></canvas></div></div>
+      </div>
+    </div>
+    <div class="dash-section">
+      <div class="sec-hdr"><span class="sec-title">Загруженность портов</span><span class="d-count" id="port-lbl"></span></div>
+      <div class="port-kpis" id="port-kpis"></div>
+      <div class="two-col">
+        <div class="chart-card"><h3>Наиболее загруженные (топ-10)</h3><div id="port-high"></div></div>
+        <div class="chart-card"><h3>Наименее загруженные (топ-10)</h3><div id="port-low"></div></div>
+      </div>
+    </div>
+    <div class="dash-section">
+      <div class="sec-hdr">
+        <div style="display:flex;align-items:center;gap:10px"><span class="sec-title">Проблемные записи</span><span class="d-count" id="d-count"></span></div>
+        <div style="display:flex;align-items:center;gap:7px">
+          <input type="text" class="dash-search" id="dash-search" placeholder="Поиск…" oninput="renderDashTable()"/>
+          <button class="export-btn" id="dash-exp-btn" onclick="exportDashboard()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Скачать xlsx
+          </button>
+        </div>
+      </div>
+      <div class="chips" id="filter-chips"></div>
+      <div class="tw" id="dash-tw" style="max-height:400px;border:1px solid var(--border);border-radius:8px;overflow:auto"></div>
+    </div>
+  </div>
+
+  <div id="objects-view">
+    <div class="kpi-strip" id="kpi-strip"></div>
+    <div class="content">
+      <div id="mob-sb-overlay" onclick="closeMobSidebar()"></div>
+      <div class="sidebar">
+        <div class="sb-search"><input type="text" class="sb-inp" id="sb-search" placeholder="Поиск объекта…" oninput="filterSidebar(this.value)"/></div>
+        <div class="sb-list" id="sb-list"></div>
+      </div>
+      <div class="tpanel">
+        <div class="toolbar">
+          <button class="mob-sb-btn" onclick="toggleMobSidebar()" title="Объекты">☰</button>
+          <span class="tbar-title" id="tbar-title">Все объекты — сводка</span>
+          <span class="row-count" id="row-count"></span>
+          <span class="done-counter" id="done-counter" style="display:none"></span>
+          <input type="text" class="tb-search" id="tb-search" placeholder="Поиск…" oninput="applyFilter()"/>
+          <button class="tbtn" id="issues-btn" onclick="toggleIssues()">⚠ Только с замечаниями</button>
+          <button class="tbtn" id="hide-done-btn" style="display:none" onclick="toggleHideDone()">Скрыть обработанные</button>
+          <button class="export-btn" id="obj-exp-btn" onclick="exportCurrent()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Скачать xlsx
+          </button>
+          <button class="tbtn" id="batch-ticket-btn" style="display:none" onclick="generateBatchTicket(curMag)">📋 Заявка по объекту</button>
+        </div>
+        <div class="tw" id="main-tw"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="dupes-view">
+    <div class="dup-top">
+      <div class="dash-top-lbl">Дублирующиеся серийные номера</div>
+      <div class="dup-kpi-row" id="dup-kpi-row"></div>
+    </div>
+    <div id="dup-content"></div>
+  </div>
+</div>
+
+<div id="card-overlay" onclick="closeCard()"></div>
+<div id="detail-card"></div>
+
+<div id="ticket-overlay" onclick="closeTicketModal()"></div>
+<div id="ticket-modal">
+  <div class="tkt-hdr">
+    <div class="tkt-hdr-left">
+      <span class="tkt-title" id="ticket-title">Заявка</span>
+      <span class="tkt-sub">Готово к отправке — скопируйте текст</span>
+    </div>
+    <button class="cx" style="color:var(--slate)" onclick="closeTicketModal()">×</button>
+  </div>
+  <textarea id="ticket-text" readonly spellcheck="false"></textarea>
+  <div class="tkt-footer">
+    <button class="tkt-copy-btn" id="copy-ticket-btn" onclick="copyTicket()">📋 Скопировать в буфер</button>
+    <button class="tbtn" onclick="closeTicketModal()">Закрыть</button>
+    <span style="margin-left:auto;font-size:11px;color:var(--slate-lt)" id="tkt-hint"></span>
   </div>
 </div>
 
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
-let allData = [];        // all rows as objects
-let grouped = {};        // mag → rows[]
-let prefixMap = {};      // mag → 'MAG' | 'DS'
-let currentMag = null;   // null = summary
-let showIssuesOnly = false;
-let sortCol = null;
-let sortDesc = false;
-const COLS_SKIP_SORT = new Set();
+// ══ CONSTANTS ════════════════════════════════════════════════════════════════
+const ISSUE_DEFS=[
+  {key:'no_ip',    label:'Без IP-адреса',    color:'#F59E0B',filter:r=>!r['IP Коммутатора']},
+  {key:'no_loc',   label:'Без расположения', color:'#F59E0B',filter:r=>!r['Расположение']},
+  {key:'no_cab',   label:'Без шкафа',        color:'#F59E0B',filter:r=>!r['Шкаф']},
+  {key:'no_lyra',  label:'Без SN Lyra',      color:'#F59E0B',filter:r=>!r['SN Lyra']},
+  {key:'bad_lyra', label:'Не найден в Лира', color:'#EF4444',filter:r=>(r['SN Lyra']||'').toLowerCase().includes('не найден')},
+  {key:'no_netbox',label:'Без SN Netbox',    color:'#F59E0B',filter:r=>!r['SN Netbox']},
+  {key:'no_model', label:'Без модели SW',    color:'#EF4444',filter:r=>!r['Модель SW']},
+  {key:'multi',    label:'2+ замечания',     color:'#DC2626',filter:r=>r._issues>=2},
+];
 
-// ── Helper: object label ───────────────────────────────────────────────────
-function objLabel(mag) {
-  return `${prefixMap[mag] || 'MAG'} ${mag}`;
+// ══ STATE ════════════════════════════════════════════════════════════════════
+let allData=[],grouped={},prefixMap={};
+let curView='dashboard',curMag=null;
+let showIssuesOnly=false,dashFilter='all';
+let sortCol=null,sortDesc=false;
+let hideDone=false, cardMag=null, cardSw=null;
+
+// ══ HELPERS ══════════════════════════════════════════════════════════════════
+const objLabel=m=>`${prefixMap[m]||'MAG'} ${m}`;
+const esc=s=>String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+const pct=(n,t)=>t?Math.round(n/t*100):0;
+const dateStr=()=>new Date().toLocaleDateString('ru-RU').replace(/\./g,'-');
+const isDark=()=>document.documentElement.classList.contains('dark');
+
+function portColor(p){return p>=80?'#EF4444':p>=50?'#F59E0B':p>=20?'#10B981':'#1D6FA4';}
+
+function getPortStats(rows){
+  let up=0,down=0;
+  rows.forEach(r=>{up+=parseInt(r['UP'])||0;down+=parseInt(r['DOWN'])||0;});
+  const total=up+down;
+  return{up,down,total,pct:total?Math.round(up/total*100):0};
 }
 
-// ── Upload handlers ────────────────────────────────────────────────────────
-const dropZone = document.getElementById('drop-zone');
-const fileInput = document.getElementById('file-input');
+// ══ COPY IP ═══════════════════════════════════════════════════════════════════
+async function copyIP(ip,btn,ev){
+  if(ev)ev.stopPropagation();
+  try{await navigator.clipboard.writeText(ip);}
+  catch{const t=document.createElement('textarea');t.value=ip;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);}
+  btn.innerHTML='✓';btn.classList.add('ok');
+  setTimeout(()=>{btn.innerHTML='⎘';btn.classList.remove('ok');},1500);
+}
 
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault(); dropZone.classList.remove('drag');
-  const f = e.dataTransfer.files[0];
-  if (f) processFile(f);
-});
-fileInput.addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+// ══ NOTES & DONE STATUS ═══════════════════════════════════════════════════════
+const noteKey=(m,s)=>'swn_note_'+m+'_'+s;
+const doneKey=(m,s)=>'swn_done_'+m+'_'+s;
+const getNote=(m,s)=>{try{return localStorage.getItem(noteKey(m,s))||'';}catch{return '';}};
+const saveNote=(m,s,t)=>{try{t?localStorage.setItem(noteKey(m,s),t):localStorage.removeItem(noteKey(m,s));}catch{}};
+const isProcessed=(m,s)=>{try{return localStorage.getItem(doneKey(m,s))==='1';}catch{return false;}};
+const setProcessed=(m,s,v)=>{try{v?localStorage.setItem(doneKey(m,s),'1'):localStorage.removeItem(doneKey(m,s));}catch{}};
 
-function processFile(file) {
-  // show loading
-  document.getElementById('upload-view').innerHTML = `
-    <div style="text-align:center;padding:80px">
-      <div class="spinner"></div>
-      <div class="loading-msg">Обрабатываем файл…</div>
-    </div>`;
+function toggleDone(mag,sw,checked,ev){
+  if(ev)ev.stopPropagation();
+  setProcessed(mag,sw,checked);
+  updateDoneCounter();
+  document.querySelectorAll('[data-swkey="'+mag+'__'+sw+'"]').forEach(tr=>tr.classList.toggle('is-done',checked));
+  if(cardMag===mag&&cardSw===sw)syncCardDoneBtn(checked);
+}
 
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const wb = XLSX.read(e.target.result, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      // Data starts at row 3 (header=2, 0-indexed), find header row
-      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      // Find header row (contains 'Mag')
-      let headerRow = 0;
-      for (let i = 0; i < Math.min(10, raw.length); i++) {
-        if (raw[i].includes('Mag') || raw[i].includes('mag')) { headerRow = i; break; }
-      }
-      const headers = raw[headerRow];
-      const rows = raw.slice(headerRow + 1).filter(r => r.some(c => c !== ''));
+function toggleDoneFromCard(){
+  const v=!isProcessed(cardMag,cardSw);
+  setProcessed(cardMag,cardSw,v);
+  syncCardDoneBtn(v);
+  updateDoneCounter();
+  renderDataTable();
+}
 
-      allData = rows.map(r => {
-        const obj = {};
-        headers.forEach((h, i) => { obj[h] = String(r[i] ?? '').trim(); });
-        // compute remarks
-        const issues = [];
-        const ip     = obj['IP Коммутатора'] || '';
-        const loc    = obj['Расположение'] || '';
-        const cab    = obj['Шкаф'] || '';
-        const lyra   = obj['SN Lyra'] || '';
-        const netbox = obj['SN Netbox'] || '';
-        const model  = obj['Модель SW'] || '';
-        if (!ip)  issues.push('Не указан IP-адрес');
-        if (!loc) issues.push('Не указано местоположение');
-        if (!cab) issues.push('Не указан шкаф');
-        if (!lyra) issues.push('Не указан SN Lyra');
-        else if (lyra.toLowerCase().includes('не найден')) issues.push('Не найден в Лира');
-        if (!netbox) issues.push('Не указан SN Netbox');
-        if (!model)  issues.push('Не указана модель SW');
-        obj['Замечания'] = issues.join('; ');
-        obj['_issues'] = issues.length;
+function saveNoteFromCard(text){
+  saveNote(cardMag,cardSw,text);
+  const sw=cardSw,mag=cardMag;
+  document.querySelectorAll('[data-swkey="'+mag+'__'+sw+'"] .sw').forEach(td=>{
+    const ind=td.querySelector('.has-note');
+    if(text&&!ind){const s=document.createElement('span');s.className='has-note';s.title='Есть заметка';s.textContent='✎';td.appendChild(s);}
+    else if(!text&&ind)ind.remove();
+  });
+}
+
+function syncCardDoneBtn(done){
+  const btn=document.getElementById('card-done-btn');
+  if(!btn)return;
+  btn.textContent=done?'✓ Обработано':'○ Обработать';
+  btn.classList.toggle('active',done);
+}
+
+function updateDoneCounter(){
+  const el=document.getElementById('done-counter');
+  const hb=document.getElementById('hide-done-btn');
+  if(!el||!hb)return;
+  if(!curMag){el.style.display='none';hb.style.display='none';return;}
+  const withIssues=(grouped[curMag]||[]).filter(r=>r._issues>0);
+  if(!withIssues.length){el.style.display='none';hb.style.display='none';return;}
+  const cnt=withIssues.filter(r=>isProcessed(curMag,r['Коммутатор'])).length;
+  el.textContent='✓ '+cnt+' / '+withIssues.length;
+  el.style.display='inline-block';hb.style.display='inline-block';
+  if(cnt===withIssues.length){el.style.background='var(--ok-bg)';el.style.color='var(--ok)';}
+  else if(cnt>0){el.style.background='var(--warn-bg)';el.style.color='var(--warn)';}
+  else{el.style.background='transparent';el.style.color='var(--slate-lt)';}
+}
+
+function toggleHideDone(){
+  hideDone=!hideDone;
+  const btn=document.getElementById('hide-done-btn');
+  btn.classList.toggle('active',hideDone);
+  btn.textContent=hideDone?'Показать обработанные':'Скрыть обработанные';
+  renderDataTable();
+}
+
+// ══ THEME ════════════════════════════════════════════════════════════════════
+function toggleTheme(){
+  const dark=document.documentElement.classList.toggle('dark');
+  localStorage.setItem('sw-theme',dark?'dark':'light');
+  document.getElementById('theme-btn').textContent=dark?'☀️':'🌙';
+  document.getElementById('theme-btn').title=dark?'Светлая тема':'Тёмная тема';
+  if(allData.length){renderCharts();renderModelStats();}
+}
+(function initTheme(){
+  const saved=localStorage.getItem('sw-theme');
+  const sys=window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if(saved==='dark'||(saved===null&&sys)){
+    document.documentElement.classList.add('dark');
+    document.getElementById('theme-btn').textContent='☀️';
+    document.getElementById('theme-btn').title='Светлая тема';
+  }
+})();
+
+// ══ UPLOAD ═══════════════════════════════════════════════════════════════════
+document.getElementById('drop-zone').addEventListener('dragover',e=>{e.preventDefault();e.currentTarget.classList.add('drag')});
+document.getElementById('drop-zone').addEventListener('dragleave',e=>e.currentTarget.classList.remove('drag'));
+document.getElementById('drop-zone').addEventListener('drop',e=>{e.preventDefault();e.currentTarget.classList.remove('drag');if(e.dataTransfer.files[0])processFile(e.dataTransfer.files[0])});
+document.getElementById('fi').addEventListener('change',e=>{if(e.target.files[0])processFile(e.target.files[0])});
+
+function processFile(file){
+  document.getElementById('upload-view').innerHTML=`<div style="text-align:center;padding:80px"><div class="spinner"></div><div style="color:var(--slate);font-size:14px">Обрабатываем файл…</div></div>`;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      let hRow=0;
+      for(let i=0;i<Math.min(10,raw.length);i++){if(raw[i].includes('Mag')){hRow=i;break}}
+      const headers=raw[hRow];
+      const rows=raw.slice(hRow+1).filter(r=>r.some(c=>c!==''));
+      allData=rows.map(r=>{
+        const obj={};
+        headers.forEach((h,i)=>{obj[h]=String(r[i]??'').trim()});
+        const issues=[];
+        const ip=obj['IP Коммутатора']||'',loc=obj['Расположение']||'',
+              cab=obj['Шкаф']||'',lyra=obj['SN Lyra']||'',
+              nb=obj['SN Netbox']||'',mdl=obj['Модель SW']||'';
+        if(!ip)  issues.push('Не указан IP-адрес');
+        if(!loc) issues.push('Не указано местоположение');
+        if(!cab) issues.push('Не указан шкаф');
+        if(!lyra) issues.push('Не указан SN Lyra');
+        else if(lyra.toLowerCase().includes('не найден')) issues.push('Не найден в Лира');
+        if(!nb)  issues.push('Не указан SN Netbox');
+        if(!mdl) issues.push('Не указана модель SW');
+        obj['Замечания']=issues.join('; ');
+        obj._issues=issues.length;
         return obj;
       });
-
-      // Group
-      grouped = {};
-      allData.forEach(row => {
-        const m = row['Mag'] || 'Неопределённый объект';
-        if (!grouped[m]) grouped[m] = [];
-        grouped[m].push(row);
+      grouped={};
+      allData.forEach(r=>{const m=r['Mag']||'?';if(!grouped[m])grouped[m]=[];grouped[m].push(r)});
+      prefixMap={};
+      Object.entries(grouped).forEach(([m,rows])=>{
+        const ds=rows.filter(r=>(r['Коммутатор']||'').startsWith('DS')).length;
+        prefixMap[m]=ds>rows.length/2?'DS':'MAG';
       });
-
-      // Build prefix map: DS if majority of switches start with DS, else MAG
-      prefixMap = {};
-      Object.entries(grouped).forEach(([m, rows]) => {
-        const dsCount  = rows.filter(r => (r['Коммутатор']||'').startsWith('DS')).length;
-        const magCount = rows.filter(r => (r['Коммутатор']||'').startsWith('MAG')).length;
-        prefixMap[m] = dsCount > magCount ? 'DS' : 'MAG';
-      });
-
-      document.getElementById('header-file').textContent = file.name;
-      document.getElementById('upload-view').style.display = 'none';
-      document.getElementById('main-view').style.display = 'flex';
-
-      renderKPI();
-      renderSidebar();
-      showSummary();
-    } catch(err) {
-      document.getElementById('upload-view').innerHTML = `
-        <div style="text-align:center;padding:80px;color:#EF4444">
-          <div style="font-size:32px;margin-bottom:16px">⚠</div>
-          <div style="font-weight:600;margin-bottom:8px">Ошибка при чтении файла</div>
-          <div style="color:#64748B;font-size:13px">${err.message}</div>
-          <button class="upload-btn" style="margin-top:24px" onclick="location.reload()">Попробовать снова</button>
-        </div>`;
+      const dups=findDuplicates();
+      const dupTotal=(dups['SN Netbox']||[]).length+(dups['SN Lyra']||[]).length;
+      if(dupTotal>0){const b=document.getElementById('dup-badge');b.textContent=dupTotal;b.style.display='inline-block';}
+      document.getElementById('hdr-file').textContent=file.name;
+      const mob=()=>(window.innerWidth||document.documentElement.clientWidth)<=640;
+      document.getElementById('gsw').style.display=mob()?'none':'block';
+      document.getElementById('main-nav').style.display='block';
+      document.getElementById('upload-view').style.display='none';
+      document.getElementById('main-view').style.display='flex';
+      switchView('dashboard');
+    }catch(err){
+      document.getElementById('upload-view').innerHTML=`<div style="text-align:center;padding:80px">
+        <div style="font-size:36px;margin-bottom:16px">⚠</div>
+        <div style="font-weight:600;color:var(--err);margin-bottom:8px">Ошибка чтения файла</div>
+        <div style="color:var(--slate);font-size:13px">${err.message}</div>
+        <button class="upload-btn" style="margin-top:20px" onclick="location.reload()">Попробовать снова</button></div>`;
     }
   };
   reader.readAsArrayBuffer(file);
 }
 
-// ── KPI ───────────────────────────────────────────────────────────────────
-function renderKPI() {
-  const total  = allData.length;
-  const noIp   = allData.filter(r => !r['IP Коммутатора']).length;
-  const noLoc  = allData.filter(r => !r['Расположение']).length;
-  const noCab  = allData.filter(r => !r['Шкаф']).length;
-  const noBoth = allData.filter(r => !r['IP Коммутатора'] && !r['Расположение']).length;
-  const noLyra = allData.filter(r => !r['SN Lyra']).length;
-  const badLyra= allData.filter(r => (r['SN Lyra']||'').toLowerCase().includes('не найден')).length;
-  const noNetbox = allData.filter(r => !r['SN Netbox']).length;
-  const noModel  = allData.filter(r => !r['Модель SW']).length;
-  const objs   = Object.keys(grouped).length;
-
-  const kpis = [
-    { label: 'Объектов',           value: objs,    cls: '' },
-    { label: 'Коммутаторов',       value: total,   cls: '' },
-    { label: 'Без IP',             value: noIp,    cls: noIp    ? 'warn' : '' },
-    { label: 'Без расположения',   value: noLoc,   cls: noLoc   ? 'warn' : '' },
-    { label: 'Без шкафа',         value: noCab,   cls: noCab   ? 'warn' : '' },
-    { label: 'Без IP и расположения', value: noBoth, cls: noBoth ? 'err'  : '' },
-    { label: 'Без SN Lyra',        value: noLyra,  cls: noLyra  ? 'warn' : '' },
-    { label: 'Не найден в Лира',   value: badLyra, cls: badLyra ? 'err'  : '' },
-    { label: 'Без SN Netbox',      value: noNetbox,cls: noNetbox? 'warn' : '' },
-    { label: 'Без модели SW',      value: noModel, cls: noModel ? 'warn' : '' },
-  ];
-
-  document.getElementById('kpi-strip').innerHTML = kpis.map(k => `
-    <div class="kpi-card">
-      <div class="kpi-value ${k.cls}">${k.value}</div>
-      <div class="kpi-label">${k.label}</div>
-    </div>`).join('');
+// ══ NAVIGATION ═══════════════════════════════════════════════════════════════
+function switchView(v){
+  curView=v;
+  document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',(i===0&&v==='dashboard')||(i===1&&v==='objects')||(i===2&&v==='dupes')));
+  document.getElementById('dashboard-view').style.display=v==='dashboard'?'block':'none';
+  document.getElementById('objects-view').style.display=v==='objects'?'flex':'none';
+  document.getElementById('dupes-view').style.display=v==='dupes'?'block':'none';
+  if(v==='dashboard')renderDashboard();
+  else if(v==='objects'){renderKPI();renderSidebar();if(curMag)renderDataTable();else showSummary();}
+  else if(v==='dupes')renderDuplicates();
 }
 
-// ── Sidebar ───────────────────────────────────────────────────────────────
-function renderSidebar(filter = '') {
-  const list = document.getElementById('sidebar-list');
-  const mags = Object.keys(grouped).sort((a, b) => a.localeCompare(b, 'ru'));
-  const lf = filter.toLowerCase();
+// ══ DASHBOARD ════════════════════════════════════════════════════════════════
+function renderDashboard(){renderDashKPI();renderIssueCards();renderCharts();renderModelStats();renderPortStats();renderChips();renderDashTable();applyResponsive();}
 
-  // All summary item
-  const summaryHtml = `
-    <div class="sidebar-item ${currentMag === null ? 'active' : ''}" onclick="showSummary()">
-      <div class="status-dot dot-ok"></div>
-      <span class="obj-name">Все объекты</span>
-      <span class="obj-count">${allData.length}</span>
+function renderDashKPI(){
+  const t=allData.length,wi=allData.filter(r=>r._issues>0).length;
+  const objs=Object.keys(grouped).length,owi=Object.values(grouped).filter(g=>g.some(r=>r._issues>0)).length;
+  const h=t-wi,hp=pct(h,t);
+  document.getElementById('dash-kpi-row').innerHTML=[
+    {v:t,l:'Всего коммутаторов',c:''},
+    {v:objs,l:'Объектов',c:''},
+    {v:wi,l:'С замечаниями',c:wi?'warn':''},
+    {v:h,l:'Без замечаний',c:''},
+    {v:owi,l:'Объектов с проблемами',c:owi?'warn':''},
+    {v:`${hp}%`,l:'Заполненность',c:hp<80?'err':hp<95?'warn':''},
+  ].map(k=>`<div class="dkpi"><div class="dkpi-v ${k.c}">${k.v}</div><div class="dkpi-l">${k.l}</div></div>`).join('');
+}
+
+function renderIssueCards(){
+  const t=allData.length;
+  document.getElementById('issue-cards').innerHTML=ISSUE_DEFS.map(def=>{
+    const cnt=allData.filter(def.filter).length,p=pct(cnt,t);
+    return `<div class="issue-card ${dashFilter===def.key?'active':''}" onclick="setDashFilter('${def.key}')">
+      <div class="ic-count" style="color:${def.color}">${cnt}</div>
+      <div class="ic-name">${def.label}</div>
+      <div class="ic-bar"><div class="ic-fill" style="width:${p}%;background:${def.color}"></div></div>
+      <div class="ic-pct">${p}%</div>
     </div>`;
-
-  const items = mags
-    .filter(m => m.toLowerCase().includes(lf))
-    .map(m => {
-      const rows  = grouped[m];
-      const issues = rows.filter(r => r['_issues'] > 0).length;
-      const critical = rows.filter(r => !r['IP Коммутатора'] && !r['Расположение']).length;
-      const dotCls = critical > 0 ? 'dot-err' : issues > 0 ? 'dot-warn' : 'dot-ok';
-      return `<div class="sidebar-item ${currentMag === m ? 'active' : ''}" onclick="showMag('${esc(m)}')">
-        <div class="status-dot ${dotCls}"></div>
-        <span class="obj-name">${objLabel(m)}</span>
-        <span class="obj-count">${rows.length}</span>
-      </div>`;
-    }).join('');
-
-  list.innerHTML = summaryHtml + items;
+  }).join('');
 }
 
-function filterSidebar(val) { renderSidebar(val); }
+function renderCharts(){
+  const t=allData.length, h=allData.filter(r=>r._issues===0).length;
+  const p=pct(h,t);
+  const C=402.1; // 2*PI*64
 
-// ── Summary view ──────────────────────────────────────────────────────────
-function showSummary() {
-  currentMag = null;
-  showIssuesOnly = false;
+  // ── Donut: SVG ──────────────────────────────────────────────────────────
+  const dcEl=document.getElementById('donut-c');
+  const dw=dcEl?dcEl.parentElement:null;
+  if(dw){
+    dw.style.height='auto';
+    const gLen=(p*C/100).toFixed(1);
+    const rStart=(-90+p*3.6).toFixed(1);
+    const rLen=((t-h)*C/t).toFixed(1);
+    const redArc=t-h>0
+      ?`<circle cx="80" cy="80" r="64" fill="none" stroke="#EF4444" stroke-width="18"
+          stroke-dasharray="${rLen} ${C}" transform="rotate(${rStart} 80 80)"/>`:'';
+    dw.innerHTML=`
+      <div style="display:flex;flex-direction:column;align-items:center;padding:8px 0">
+        <div style="position:relative;width:160px;height:160px">
+          <svg width="160" height="160" viewBox="0 0 160 160">
+            <circle cx="80" cy="80" r="64" fill="none" stroke="var(--border)" stroke-width="18"/>
+            <circle cx="80" cy="80" r="64" fill="none" stroke="#10B981" stroke-width="18"
+              stroke-dasharray="${gLen} ${C}" transform="rotate(-90 80 80)"/>
+            ${redArc}
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+            <span style="font-family:var(--mono);font-size:26px;font-weight:500;color:var(--text);line-height:1">${p}%</span>
+            <span style="font-size:10px;color:var(--slate)">без проблем</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;justify-content:center">
+          <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--slate)">
+            <span style="width:10px;height:10px;border-radius:2px;background:#10B981;display:inline-block"></span>Без замечаний: ${h}
+          </span>
+          <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--slate)">
+            <span style="width:10px;height:10px;border-radius:2px;background:#EF4444;display:inline-block"></span>С замечаниями: ${t-h}
+          </span>
+        </div>
+      </div>`;
+  }
+
+  // ── Top-15: CSS bars ─────────────────────────────────────────────────────
+  const sorted=Object.entries(grouped)
+    .map(([m,rows])=>({m,cnt:rows.filter(r=>r._issues>0).length,total:rows.length}))
+    .filter(x=>x.cnt>0).sort((a,b)=>b.cnt-a.cnt).slice(0,15);
+  const maxCnt=sorted.length?sorted[0].cnt:1;
+
+  const bcEl=document.getElementById('bar-c');
+  const bw=bcEl?bcEl.parentElement:null;
+  if(bw){
+    bw.style.height='auto';
+    if(!sorted.length){
+      bw.innerHTML='<div style="color:var(--ok);text-align:center;padding:30px;font-size:14px">✓ Нет объектов с замечаниями</div>';
+    } else {
+      bw.innerHTML='<div style="padding:2px 0">'+sorted.map(x=>{
+        const ratio=pct(x.cnt,x.total);
+        const color=ratio>50?'#EF4444':ratio>20?'#F59E0B':'#1D6FA4';
+        const w=pct(x.cnt,maxCnt);
+        return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text);width:66px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${objLabel(x.m)}">${objLabel(x.m)}</span>
+          <div style="flex:1;height:14px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${w}%;background:${color};border-radius:3px"></div>
+          </div>
+          <span style="font-family:var(--mono);font-size:10px;color:${color};width:44px;text-align:right;flex-shrink:0">${x.cnt}/${x.total}</span>
+        </div>`;
+      }).join('')+'</div>';
+    }
+  }
+}
+
+function renderModelStats(){
+  const map={};
+  allData.forEach(r=>{
+    const m=(r['Модель SW']||'Не указана').trim();
+    if(!map[m])map[m]={count:0,objs:new Set()};
+    map[m].count++;if(r['Mag'])map[m].objs.add(r['Mag']);
+  });
+  const stats=Object.entries(map).map(([m,d])=>({model:m,count:d.count,objCount:d.objs.size})).sort((a,b)=>b.count-a.count);
+  const t=allData.length;
+  document.getElementById('model-lbl').textContent=stats.length+' уникальных моделей';
+
+  document.getElementById('model-table-wrap').innerHTML=`<table class="model-table">
+    <thead><tr><th>Модель SW</th><th style="text-align:right">Кол-во</th><th style="text-align:right">Объектов</th><th>Доля</th></tr></thead>
+    <tbody>${stats.map((s,i)=>`<tr>
+      <td style="font-weight:${i<3?600:400};max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--text)" title="${s.model}">${s.model}</td>
+      <td style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--text)">${s.count}</td>
+      <td style="text-align:right;font-family:var(--mono);color:var(--slate)">${s.objCount}</td>
+      <td><div style="display:flex;align-items:center;gap:6px">
+        <div style="width:56px;height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${pct(s.count,t)}%;background:var(--blue);border-radius:2px"></div></div>
+        <span style="font-size:10px;font-family:var(--mono);color:var(--slate-lt)">${pct(s.count,t)}%</span>
+      </div></td>
+    </tr>`).join('')}</tbody></table>`;
+
+  // CSS bars for top models — target canvas parent directly
+  const palette=['#1D6FA4','#10B981','#F59E0B','#8B5CF6','#EF4444','#06B6D4','#F97316','#64748B'];
+  const top=stats.slice(0,8);
+  const mcEl=document.getElementById('model-c');
+  const mcWrap=mcEl?mcEl.parentElement:null;
+  if(mcWrap){
+    mcWrap.style.height='auto';
+    mcWrap.innerHTML='<div style="padding:4px 0">'+top.map((s,i)=>`
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+          <span style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:145px" title="${s.model}">${s.model}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--slate);flex-shrink:0;margin-left:8px">${s.count}</span>
+        </div>
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${pct(s.count,stats[0].count)}%;background:${palette[i]};border-radius:3px"></div>
+        </div>
+      </div>`).join('')+'</div>';
+  }
+}
+
+function renderPortStats(){
+  const g=getPortStats(allData);
+  document.getElementById('port-lbl').textContent=`${g.total.toLocaleString('ru')} портов всего`;
+  document.getElementById('port-kpis').innerHTML=[
+    {v:g.total.toLocaleString('ru'),l:'Всего портов',c:'var(--text)'},
+    {v:g.up.toLocaleString('ru'),l:'Активных (UP)',c:'var(--ok)'},
+    {v:g.down.toLocaleString('ru'),l:'Свободных (DOWN)',c:'var(--slate)'},
+    {v:`${g.pct}%`,l:'Средняя утилизация',c:g.pct>80?'var(--err)':g.pct>50?'var(--warn)':'var(--ok)'},
+  ].map(k=>`<div class="pkpi"><div class="pkpi-v" style="color:${k.c}">${k.v}</div><div class="pkpi-l">${k.l}</div></div>`).join('');
+
+  const objStats=Object.entries(grouped)
+    .map(([m,rows])=>({m,...getPortStats(rows)}))
+    .filter(x=>x.total>0).sort((a,b)=>b.pct-a.pct);
+  const mkRow=x=>`<div class="port-obj-row">
+    <span class="port-obj-name" title="${objLabel(x.m)}">${objLabel(x.m)}</span>
+    <div class="port-obj-bar"><div class="port-obj-fill" style="width:${x.pct}%;background:${portColor(x.pct)}"></div></div>
+    <span class="port-obj-pct" style="color:${portColor(x.pct)}">${x.pct}%</span>
+  </div>`;
+  document.getElementById('port-high').innerHTML=objStats.slice(0,10).map(mkRow).join('');
+  document.getElementById('port-low').innerHTML=[...objStats].reverse().slice(0,10).map(mkRow).join('');
+}
+
+function renderChips(){
+  const chips=[{key:'all',label:'Все проблемы'},...ISSUE_DEFS.map(d=>({key:d.key,label:d.label}))];
+  document.getElementById('filter-chips').innerHTML=chips.map(c=>
+    `<div class="chip ${dashFilter===c.key?'active':''}" onclick="setDashFilter('${c.key}')">${c.label}</div>`
+  ).join('');
+}
+function setDashFilter(key){dashFilter=key;renderChips();renderIssueCards();renderDashTable();}
+
+function renderDashTable(){
+  const s=((document.getElementById('dash-search')||{}).value||'').toLowerCase();
+  let rows=allData.filter(r=>r._issues>0);
+  if(dashFilter!=='all'){const def=ISSUE_DEFS.find(d=>d.key===dashFilter);if(def)rows=rows.filter(def.filter);}
+  if(s)rows=rows.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(s)));
+  document.getElementById('d-count').textContent=`${rows.length} записей`;
+  const cols=['Mag','Коммутатор','IP Коммутатора','Расположение','Шкаф','SN Lyra','SN Netbox','Модель SW','Замечания'];
+  const thead=cols.map(c=>`<th style="cursor:default">${c==='Mag'?'Объект':c}</th>`).join('');
+  const tbody=rows.slice(0,500).map(r=>{
+    const cls=r._issues>=2?'rerr':'rwarn';
+    const cells=cols.map(c=>{
+      const v=r[c]||'';
+      if(c==='Замечания')return v?`<td><span class="badge ${r._issues>=2?'berr':'bwarn'}">${v}</span></td>`:'<td></td>';
+      if(c==='Коммутатор')return `<td class="sw" title="${v}">${v}</td>`;
+      if(c==='IP Коммутатора')return `<td class="${v?'ip':'miss'}">${v||'—'}</td>`;
+      if(c==='Mag')return `<td class="mono">${objLabel(v)}</td>`;
+      if(c==='SN Lyra'&&v.toLowerCase().includes('не найден'))return `<td style="color:var(--err);font-family:var(--mono);font-size:11px">${v}</td>`;
+      return `<td title="${v}">${v||'—'}</td>`;
+    }).join('');
+    return `<tr class="${cls}">${cells}</tr>`;
+  }).join('');
+  document.getElementById('dash-tw').innerHTML=`<table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>`;
+  if(rows.length>500)document.getElementById('d-count').textContent+=' (показано 500)';
+}
+
+// ══ KPI STRIP ════════════════════════════════════════════════════════════════
+function renderKPI(){
+  const kpis=[
+    {v:Object.keys(grouped).length,l:'Объектов',c:''},
+    {v:allData.length,l:'Коммутаторов',c:''},
+    {v:allData.filter(r=>!r['IP Коммутатора']).length,l:'Без IP',c:'warn'},
+    {v:allData.filter(r=>!r['Расположение']).length,l:'Без расположения',c:'warn'},
+    {v:allData.filter(r=>!r['Шкаф']).length,l:'Без шкафа',c:'warn'},
+    {v:allData.filter(r=>!r['IP Коммутатора']&&!r['Расположение']).length,l:'Без IP и расп.',c:'err'},
+    {v:allData.filter(r=>!r['SN Lyra']).length,l:'Без SN Lyra',c:'warn'},
+    {v:allData.filter(r=>(r['SN Lyra']||'').toLowerCase().includes('не найден')).length,l:'Не найден в Лира',c:'err'},
+    {v:allData.filter(r=>!r['SN Netbox']).length,l:'Без SN Netbox',c:'warn'},
+    {v:allData.filter(r=>!r['Модель SW']).length,l:'Без модели SW',c:'warn'},
+  ];
+  document.getElementById('kpi-strip').innerHTML=kpis.map(k=>
+    `<div class="kpi-card"><div class="kpi-v ${k.c}">${k.v}</div><div class="kpi-l">${k.l}</div></div>`
+  ).join('');
+  applyResponsive();
+}
+
+// ══ SIDEBAR ══════════════════════════════════════════════════════════════════
+function renderSidebar(filter=''){
+  const fl=filter.toLowerCase();
+  const mags=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,'ru'));
+  const sum=`<div class="sb-item ${curMag===null?'active':''}" onclick="showSummary()">
+    <div class="dot dok"></div><span class="sbn">Все объекты</span><span class="sbc">${allData.length}</span></div>`;
+  const items=mags.filter(m=>objLabel(m).toLowerCase().includes(fl)).map(m=>{
+    const rows=grouped[m],iss=rows.filter(r=>r._issues>0).length;
+    const crit=rows.filter(r=>!r['IP Коммутатора']&&!r['Расположение']).length;
+    return `<div class="sb-item ${curMag===m?'active':''}" onclick="showMag('${esc(m)}')">
+      <div class="dot ${crit>0?'derr':iss>0?'dwarn':'dok'}"></div>
+      <span class="sbn">${objLabel(m)}</span><span class="sbc">${rows.length}</span></div>`;
+  }).join('');
+  document.getElementById('sb-list').innerHTML=sum+items;
+}
+function filterSidebar(v){renderSidebar(v);}
+
+// ══ SUMMARY TABLE ════════════════════════════════════════════════════════════
+function showSummary(){
+  curMag=null;showIssuesOnly=false;closeMobSidebar();
+  hideDone=false;
+  document.getElementById('hide-done-btn').classList.remove('active');
+  document.getElementById('hide-done-btn').textContent='Скрыть обработанные';
   document.getElementById('issues-btn').classList.remove('active');
-  document.getElementById('toolbar-title').textContent = 'Все объекты — сводка';
-  document.getElementById('table-search').value = '';
-  renderSidebar(document.getElementById('sidebar-search').value);
-
-  const mags = Object.keys(grouped).sort((a, b) => a.localeCompare(b, 'ru'));
-  const rows = mags.map(m => {
-    const grp   = grouped[m];
-    const total = grp.length;
-    const noIp  = grp.filter(r => !r['IP Коммутатора']).length;
-    const noLoc = grp.filter(r => !r['Расположение']).length;
-    const noCab = grp.filter(r => !r['Шкаф']).length;
-    const noBoth= grp.filter(r => !r['IP Коммутатора'] && !r['Расположение']).length;
-    const noLyra  = grp.filter(r => !r['SN Lyra']).length;
-    const badLyra = grp.filter(r => (r['SN Lyra']||'').toLowerCase().includes('не найден')).length;
-    const noNetbox= grp.filter(r => !r['SN Netbox']).length;
-    const noModel = grp.filter(r => !r['Модель SW']).length;
-    const okPct = Math.round((total - grp.filter(r=>r['_issues']>0).length) / total * 100);
-    const barColor = okPct === 100 ? '#10B981' : okPct > 70 ? '#F59E0B' : '#EF4444';
+  document.getElementById('tb-search').value='';
+  document.getElementById('batch-ticket-btn').style.display='none';
+  document.getElementById('tbar-title').textContent='Все объекты — сводка';
+  renderSidebar(document.getElementById('sb-search').value);
+  const mags=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,'ru'));
+  document.getElementById('row-count').textContent=`${mags.length} объектов`;
+  const thead=['Объект','Всего','Без IP','Без расп.','Без шкафа','Без обоих','Без SN Lyra','Не найден','Без SN Netbox','Без модели','Порты UP%','Заполненность']
+    .map(h=>`<th style="cursor:default">${h}</th>`).join('');
+  const tbody=mags.map(m=>{
+    const g=grouped[m],t=g.length;
+    const ni=g.filter(r=>!r['IP Коммутатора']).length;
+    const nl=g.filter(r=>!r['Расположение']).length;
+    const nc=g.filter(r=>!r['Шкаф']).length;
+    const nb=g.filter(r=>!r['IP Коммутатора']&&!r['Расположение']).length;
+    const nly=g.filter(r=>!r['SN Lyra']).length;
+    const bly=g.filter(r=>(r['SN Lyra']||'').toLowerCase().includes('не найден')).length;
+    const nnb=g.filter(r=>!r['SN Netbox']).length;
+    const nmd=g.filter(r=>!r['Модель SW']).length;
+    const ps=getPortStats(g);
+    const ok=pct(t-g.filter(r=>r._issues>0).length,t);
+    const bc=ok===100?'#10B981':ok>70?'#F59E0B':'#EF4444';
     return `<tr onclick="showMag('${esc(m)}')" style="cursor:pointer">
       <td class="mono">${objLabel(m)}</td>
-      <td class="mono" style="font-weight:600;color:var(--navy)">${total}</td>
-      <td class="${noIp?'count-warn':'count-ok'}">${noIp||'—'}</td>
-      <td class="${noLoc?'count-warn':'count-ok'}">${noLoc||'—'}</td>
-      <td class="${noCab?'count-warn':'count-ok'}">${noCab||'—'}</td>
-      <td class="${noBoth?'count-err':'count-ok'}">${noBoth||'—'}</td>
-      <td class="${noLyra?'count-warn':'count-ok'}">${noLyra||'—'}</td>
-      <td class="${badLyra?'count-err':'count-ok'}">${badLyra||'—'}</td>
-      <td class="${noNetbox?'count-warn':'count-ok'}">${noNetbox||'—'}</td>
-      <td class="${noModel?'count-warn':'count-ok'}">${noModel||'—'}</td>
-      <td>
-        <div class="obj-completeness">
-          <div class="bar-track"><div class="bar-fill" style="width:${okPct}%;background:${barColor}"></div></div>
-          <span style="font-family:var(--mono);font-size:11px;color:var(--slate-lt);width:32px">${okPct}%</span>
-        </div>
-      </td>
+      <td class="mono" style="font-weight:600;color:var(--text)">${t}</td>
+      <td class="${ni?'cnt-warn':'cnt-ok'}">${ni||'—'}</td>
+      <td class="${nl?'cnt-warn':'cnt-ok'}">${nl||'—'}</td>
+      <td class="${nc?'cnt-warn':'cnt-ok'}">${nc||'—'}</td>
+      <td class="${nb?'cnt-err':'cnt-ok'}">${nb||'—'}</td>
+      <td class="${nly?'cnt-warn':'cnt-ok'}">${nly||'—'}</td>
+      <td class="${bly?'cnt-err':'cnt-ok'}">${bly||'—'}</td>
+      <td class="${nnb?'cnt-warn':'cnt-ok'}">${nnb||'—'}</td>
+      <td class="${nmd?'cnt-warn':'cnt-ok'}">${nmd||'—'}</td>
+      <td>${ps.total>0?`<div class="mini-util"><div class="mini-bar"><div class="mini-fill" style="width:${ps.pct}%;background:${portColor(ps.pct)}"></div></div><span class="mini-pct">${ps.pct}%</span></div>`:'—'}</td>
+      <td><div class="obj-comp"><div class="bar-track"><div class="bar-fill" style="width:${ok}%;background:${bc}"></div></div><span class="cpct">${ok}%</span></div></td>
     </tr>`;
   }).join('');
-
-  document.getElementById('row-count').textContent = `${mags.length} объектов`;
-  document.getElementById('table-wrap').innerHTML = `
-    <table id="summary-table">
-      <thead><tr>
-        <th>Объект</th><th>Всего</th><th>Без IP</th>
-        <th>Без расположения</th><th>Без шкафа</th><th>Без IP и расп.</th>
-        <th>Без SN Lyra</th><th>Не найден в Лира</th>
-        <th>Без SN Netbox</th><th>Без модели SW</th>
-        <th style="min-width:140px">Заполненность</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+  document.getElementById('main-tw').innerHTML=`<table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>`;
 }
 
-// ── Per-object view ───────────────────────────────────────────────────────
-function showMag(mag) {
-  currentMag = mag;
-  showIssuesOnly = false;
+// ══ OBJECT DETAIL TABLE ═══════════════════════════════════════════════════════
+function showMag(mag){
+  curMag=mag;showIssuesOnly=false;closeMobSidebar();
   document.getElementById('issues-btn').classList.remove('active');
-  document.getElementById('toolbar-title').textContent = objLabel(mag);
-  document.getElementById('table-search').value = '';
-  renderSidebar(document.getElementById('sidebar-search').value);
+  document.getElementById('tb-search').value='';
+  document.getElementById('tbar-title').textContent=objLabel(mag);
+  const hasIssues=(grouped[mag]||[]).some(r=>r._issues>0);
+  document.getElementById('batch-ticket-btn').style.display=hasIssues?'inline-block':'none';
+  renderSidebar(document.getElementById('sb-search').value);
   renderDataTable();
 }
 
-function renderDataTable() {
-  let rows = currentMag ? grouped[currentMag] : allData;
-  const search = document.getElementById('table-search').value.toLowerCase();
-  if (showIssuesOnly) rows = rows.filter(r => r['_issues'] > 0);
-  if (search) rows = rows.filter(r =>
-    Object.values(r).some(v => String(v).toLowerCase().includes(search)));
-
-  document.getElementById('row-count').textContent = `${rows.length} записей`;
-
-  // Columns to show
-  const cols = ['Mag','Шкаф','Коммутатор','IP Коммутатора','Расположение','SN Netbox','SN Lyra','Модель SW','Комментарий','Замечания'];
-
-  const thead = cols.map((c,i) => {
-    const sorted = sortCol === c;
-    return `<th class="${sorted?'sorted':''}${sorted&&sortDesc?' desc':''}" onclick="sortBy('${esc(c)}')">${c}</th>`;
+function renderDataTable(){
+  if(!curMag)return;
+  let rows=grouped[curMag]||[];
+  const s=(document.getElementById('tb-search').value||'').toLowerCase();
+  if(showIssuesOnly)rows=rows.filter(r=>r._issues>0);
+  if(hideDone)rows=rows.filter(r=>!isProcessed(curMag,r['Коммутатор']));
+  if(s)rows=rows.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(s)));
+  document.getElementById('row-count').textContent=rows.length+' записей';
+  if(sortCol)rows=[...rows].sort((a,b)=>{
+    const r=(a[sortCol]||'').localeCompare(b[sortCol]||'','ru',{numeric:true});
+    return sortDesc?-r:r;
+  });
+  const cols=['_done','Шкаф','Коммутатор','IP Коммутатора','Расположение','UP','DOWN','SN Netbox','SN Lyra','Модель SW','Замечания'];
+  const thead='<th style="width:28px;cursor:default"></th>'+cols.slice(1).map(c=>{
+    const s2=sortCol===c;
+    return '<th class="'+(s2?'sorted':'')+' '+(s2&&sortDesc?'desc':'')+'" onclick="doSort(\''+esc(c)+'\')">'+(c==='UP'?'UP':c==='DOWN'?'DOWN':c)+'</th>';
   }).join('');
+  const tbody=rows.map(r=>{
+    const sw=r['Коммутатор']||'';
+    const done=isProcessed(curMag,sw);
+    const hasNote=!!getNote(curMag,sw);
+    const issCls=r._issues>=2?'rerr':r._issues>0?'rwarn':'';
+    const cls=(done?'is-done ':'')+issCls;
+    const up=parseInt(r['UP'])||0,down=parseInt(r['DOWN'])||0;
+    const cells=cols.map(c=>{
+      const v=r[c]||'';
+      if(c==='_done'){
+        return '<td onclick="event.stopPropagation()" style="text-align:center;padding:4px 6px">'
+          +'<input type="checkbox" class="done-check"'+(done?' checked':'')
+          +' onchange="toggleDone(\''+esc(curMag)+'\',\''+esc(sw)+'\',this.checked,event)"/></td>';
+      }
+      if(c==='Замечания')return v?'<td><span class="badge '+(r._issues>=2?'berr':'bwarn')+'">'+v+'</span></td>':'<td></td>';
+      if(c==='IP Коммутатора')return v
+        ?'<td class="ip">'+v+'<button class="copy-ip-btn" onclick="copyIP(\''+v+'\',this,event)" title="Скопировать IP">⎘</button></td>'
+        :'<td class="miss">—</td>';
+      if(c==='Коммутатор')return '<td class="sw" title="'+v+'">'+v+(hasNote?'<span class="has-note" title="Есть заметка">✎</span>':'')+'</td>';
+      if(c==='Шкаф')return '<td class="mono">'+(v||'—')+'</td>';
+      if(c==='UP')return up?'<td class="port-cell"><span class="port-up">'+up+'</span></td>':'<td class="miss">—</td>';
+      if(c==='DOWN')return down?'<td class="port-cell"><span class="port-dn">'+down+'</span></td>':'<td class="miss">—</td>';
+      if(c==='SN Lyra'&&v.toLowerCase().includes('не найден'))return '<td style="color:var(--err);font-family:var(--mono);font-size:11px">'+v+'</td>';
+      if(c==='SN Lyra'||c==='SN Netbox')return '<td class="'+(v?'mono':'miss')+'" style="font-size:11px">'+(v||'—')+'</td>';
+      return '<td title="'+v+'">'+(v||'')+'</td>';
+    }).join('');
+    return '<tr class="'+cls+'" data-swkey="'+curMag+'__'+esc(sw)+'" onclick="openCard(\''+esc(curMag)+'\',\''+esc(sw)+'\')" style="cursor:pointer">'+cells+'</tr>';
+  }).join('');
+  document.getElementById('main-tw').innerHTML='<table><thead><tr>'+thead+'</tr></thead><tbody>'+tbody+'</tbody></table>';
+  updateDoneCounter();
+}
 
-  // Sort
-  let sorted = [...rows];
-  if (sortCol) {
-    sorted.sort((a, b) => {
-      const av = a[sortCol] || '', bv = b[sortCol] || '';
-      const r = av.localeCompare(bv, 'ru', {numeric: true});
-      return sortDesc ? -r : r;
+function applyFilter(){if(curMag)renderDataTable();else showSummary();}
+function toggleIssues(){showIssuesOnly=!showIssuesOnly;document.getElementById('issues-btn').classList.toggle('active',showIssuesOnly);if(curMag)renderDataTable();}
+function doSort(col){if(sortCol===col)sortDesc=!sortDesc;else{sortCol=col;sortDesc=false;}renderDataTable();}
+
+// ══ DETAIL CARD ═══════════════════════════════════════════════════════════════
+function openCard(mag,sw){
+  const row=allData.find(r=>r['Mag']===mag&&r['Коммутатор']===sw);
+  if(!row)return;
+  cardMag=mag; cardSw=sw;
+  const up=parseInt(row['UP'])||0,down=parseInt(row['DOWN'])||0;
+  const total=up+down,pctUp=total?Math.round(up/total*100):0;
+  const done=isProcessed(mag,sw);
+  const note=getNote(mag,sw);
+  const cf=(lbl,v,cls)=>v
+    ?`<div class="cf"><span class="cfl">${lbl}</span><span class="cfv ${cls||''}">${v}</span></div>`
+    :`<div class="cf"><span class="cfl">${lbl}</span><span class="cfv miss">—</span></div>`;
+  const cfIp=ip=>ip
+    ?`<div class="cf"><span class="cfl">IP-адрес</span><span class="cfv ip">${ip}<button class="copy-ip-btn" onclick="copyIP('${ip}',this,event)" title="Скопировать IP">⎘</button></span></div>`
+    :`<div class="cf"><span class="cfl">IP-адрес</span><span class="cfv miss">—</span></div>`;
+  const lyraV=row['SN Lyra']||'';
+  const lyraCls=lyraV.toLowerCase().includes('не найден')?'err mono':'mono';
+  const remarkHtml=row._issues>0
+    ?`<div style="padding:10px 18px;border-bottom:1px solid var(--border);background:${row._issues>=2?'var(--err-bg)':'var(--warn-bg)'}">
+       <span class="badge ${row._issues>=2?'berr':'bwarn'}">${row['Замечания']}</span></div>`
+    :'';
+  const commHtml=(row['Комментарий']||row['_Комментарий_Лира'])
+    ?`<div class="csec"><div class="csec-t">Комментарии из Excel</div>${cf('Комментарий',row['Комментарий'])}${cf('Лира',row['_Комментарий_Лира'])}</div>`
+    :'';
+  const portHtml=total>0
+    ?`<div class="pnums"><span style="color:var(--ok);font-weight:600">${up} UP</span><span style="color:var(--slate)">${down} DOWN</span><span style="color:var(--text)">${total} всего</span></div>
+      <div class="pbar"><div class="pbar-fill" style="width:${pctUp}%;background:${portColor(pctUp)}"></div></div>
+      <div style="font-size:11px;color:var(--slate);font-family:var(--mono)">${pctUp}% утилизация</div>`
+    :`<span class="cfv miss">Нет данных о портах</span>`;
+
+  document.getElementById('detail-card').innerHTML=`
+    <div class="chdr">
+      <div><div class="csw">${sw}</div><div class="cobj">${objLabel(mag)}</div></div>
+      <div style="display:flex;align-items:center;gap:7px">
+        <button class="done-toggle-btn ${done?'active':''}" id="card-done-btn" onclick="toggleDoneFromCard()">${done?'✓ Обработано':'○ Обработать'}</button>
+        <button class="cx" onclick="closeCard()">×</button>
+      </div>
+    </div>
+    ${remarkHtml}
+    <div class="csec">
+      <div class="csec-t">Сетевые данные</div>
+      ${cfIp(row['IP Коммутатора'])}
+      ${cf('Расположение',row['Расположение'])}
+      ${cf('Шкаф',row['Шкаф'],'mono')}
+    </div>
+    <div class="csec">
+      <div class="csec-t">Идентификация</div>
+      ${cf('Модель SW',row['Модель SW'])}
+      ${cf('SN Netbox',row['SN Netbox'],'mono')}
+      <div class="cf"><span class="cfl">SN Lyra</span><span class="cfv ${lyraV?lyraCls:'miss'}">${lyraV||'—'}</span></div>
+    </div>
+    ${commHtml}
+    <div class="csec">
+      <div class="csec-t">Порты</div>
+      ${portHtml}
+    </div>
+    <div class="csec">
+      <div class="csec-t">Заметки <span class="note-hint">· хранятся в браузере</span></div>
+      <textarea class="note-area" placeholder="Добавить заметку по этому коммутатору…" oninput="saveNoteFromCard(this.value)">${note}</textarea>
+    </div>
+    ${row._issues>0?`<div class="csec"><button class="ticket-btn" onclick="generateTicket('${esc(mag)}','${esc(sw)}')">📋 Создать заявку на внесение данных</button></div>`:''}`;
+
+  const ov=document.getElementById('card-overlay'),dc=document.getElementById('detail-card');
+  ov.style.display='block';dc.style.display='block';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ov.classList.add('open');dc.classList.add('open');}));
+}
+
+function closeCard(){
+  const ov=document.getElementById('card-overlay'),dc=document.getElementById('detail-card');
+  ov.classList.remove('open');dc.classList.remove('open');
+  setTimeout(()=>{ov.style.display='none';dc.style.display='none';},260);
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCard();});
+
+// ══ JS RESPONSIVE ENGINE (fallback for iframe/preview environments) ═══════════
+function applyResponsive(){
+  const w=window.innerWidth||document.documentElement.clientWidth;
+  const isMob=w<=640, isTab=w<=1100;
+  const cl=document.documentElement.classList;
+  cl.toggle('r-mob',isMob);
+  cl.toggle('r-tab',isTab&&!isMob);
+
+  // Search bar
+  const gsw=document.getElementById('gsw');
+  if(gsw&&allData.length) gsw.style.display=isMob?'none':'block';
+
+  // Model stats grid
+  const msi=document.querySelector('.model-stats-inner');
+  if(msi) msi.style.gridTemplateColumns=isTab?'1fr':'1fr 230px';
+  const mcc=document.querySelector('.model-chart-col');
+  if(mcc) mcc.style.display=isTab?'none':'';
+
+  // Port KPIs
+  const pk=document.getElementById('port-kpis');
+  if(pk) pk.style.gridTemplateColumns=isMob||isTab?'repeat(2,1fr)':'repeat(4,1fr)';
+
+  // Charts row (dash section)
+  document.querySelectorAll('.charts-row').forEach(el=>
+    el.style.gridTemplateColumns=isTab?'1fr':'240px 1fr');
+  document.querySelectorAll('.two-col').forEach(el=>
+    el.style.gridTemplateColumns=isTab?'1fr':'1fr 1fr');
+
+  // KPI strip
+  const ks=document.getElementById('kpi-strip');
+  if(ks) ks.style.gridTemplateColumns=isMob?'repeat(2,1fr)':isTab?'repeat(5,1fr)':'';
+
+  // Dash top KPI row
+  const dkr=document.getElementById('dash-kpi-row');
+  if(dkr) dkr.style.gridTemplateColumns=isMob?'repeat(2,1fr)':isTab?'repeat(3,1fr)':'';
+
+  // Issue cards grid
+  const ig=document.querySelector('.issue-grid');
+  if(ig) ig.style.gridTemplateColumns=isMob?'repeat(2,1fr)':isTab?'repeat(3,1fr)':'';
+
+  // Detail card width
+  const dc=document.getElementById('detail-card');
+  if(dc&&dc.classList.contains('open')) dc.style.width=isMob?'100%':isTab?'320px':'370px';
+
+  // Ticket modal
+  const tm=document.getElementById('ticket-modal');
+  if(tm){
+    if(isMob){
+      tm.style.width='100%';tm.style.maxWidth='100vw';
+      tm.style.height='92vh';tm.style.maxHeight='92vh';
+      tm.style.top='auto';tm.style.bottom='0';tm.style.left='0';
+      tm.style.borderRadius='14px 14px 0 0';
+    } else {
+      tm.style.cssText='';
+    }
+  }
+}
+
+window.addEventListener('resize',applyResponsive);
+document.addEventListener('DOMContentLoaded',applyResponsive);
+setTimeout(applyResponsive,100); // safety call after render
+
+// ══ MOBILE SIDEBAR ═══════════════════════════════════════════════════════════
+function toggleMobSidebar(){
+  const sb=document.querySelector('.sidebar');
+  const ov=document.getElementById('mob-sb-overlay');
+  if(!sb)return;
+  const open=sb.classList.toggle('mob-open');
+  ov.classList.toggle('visible',open);
+}
+function closeMobSidebar(){
+  document.querySelector('.sidebar')?.classList.remove('mob-open');
+  document.getElementById('mob-sb-overlay')?.classList.remove('visible');
+}
+
+
+function globalSearch(q){
+  const drop=document.getElementById('gdrop');
+  if(!q||q.length<2){drop.style.display='none';return;}
+  const ql=q.toLowerCase();
+  const matches=allData.filter(r=>
+    (r['Коммутатор']||'').toLowerCase().includes(ql)||
+    (r['IP Коммутатора']||'').toLowerCase().includes(ql)||
+    (r['SN Netbox']||'').toLowerCase().includes(ql)||
+    (r['SN Lyra']||'').toLowerCase().includes(ql)||
+    (r['Расположение']||'').toLowerCase().includes(ql)||
+    (r['Модель SW']||'').toLowerCase().includes(ql)
+  ).slice(0,15);
+  if(!matches.length){drop.innerHTML='<div class="gdr-none">Ничего не найдено</div>';drop.style.display='block';return;}
+  drop.innerHTML=matches.map(r=>`<div class="gdr-item" onclick="gotoSwitch('${esc(r['Mag']||'')}','${esc(r['Коммутатор']||'')}')">
+    <div class="gdr-name">${r['Коммутатор']||'—'}</div>
+    <div class="gdr-sub">${objLabel(r['Mag']||'?')} · ${r['IP Коммутатора']||'нет IP'} · ${r['Расположение']||'нет расположения'}</div>
+  </div>`).join('');
+  drop.style.display='block';
+}
+function showGDrop(){const q=document.getElementById('gsearch').value;if(q&&q.length>=2)document.getElementById('gdrop').style.display='block';}
+function gotoSwitch(mag,sw){
+  document.getElementById('gsearch').value='';
+  document.getElementById('gdrop').style.display='none';
+  switchView('objects');showMag(mag);
+  setTimeout(()=>{document.getElementById('tb-search').value=sw;applyFilter();},50);
+}
+document.addEventListener('click',e=>{if(!e.target.closest('#gsw'))document.getElementById('gdrop').style.display='none';});
+
+// ══ EXPORT ═══════════════════════════════════════════════════════════════════
+function exportToExcel(rows,filename,btnId){
+  const cols=['Mag','Шкаф','Коммутатор','IP Коммутатора','Расположение','UP','DOWN','SN Netbox','SN Lyra','Модель SW','Замечания'];
+  const hdr=cols.map(c=>c==='Mag'?'Объект':c);
+  const data=[hdr,...rows.map(r=>cols.map(c=>c==='Mag'?objLabel(r['Mag']||'?'):r[c]||''))];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  const colW=data.reduce((acc,row)=>{row.forEach((v,i)=>{acc[i]=Math.max(acc[i]||8,String(v).length+2)});return acc;},[]);
+  ws['!cols']=colW.map(w=>({wch:Math.min(w,50)}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Данные');
+  XLSX.writeFile(wb,filename);
+  if(btnId){const btn=document.getElementById(btnId);if(btn){const o=btn.innerHTML;btn.classList.add('done');btn.innerHTML='✓ Скачано';setTimeout(()=>{btn.classList.remove('done');btn.innerHTML=o;},2500);}}
+}
+function exportDashboard(){
+  let rows=allData.filter(r=>r._issues>0);
+  if(dashFilter!=='all'){const def=ISSUE_DEFS.find(d=>d.key===dashFilter);if(def)rows=rows.filter(def.filter);}
+  const s=((document.getElementById('dash-search')||{}).value||'').toLowerCase();
+  if(s)rows=rows.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(s)));
+  exportToExcel(rows,`замечания_${dateStr()}.xlsx`,'dash-exp-btn');
+}
+function exportCurrent(){
+  let rows=curMag?grouped[curMag]:allData;
+  const s=(document.getElementById('tb-search').value||'').toLowerCase();
+  if(showIssuesOnly)rows=rows.filter(r=>r._issues>0);
+  if(s)rows=rows.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(s)));
+  exportToExcel(rows,curMag?`${objLabel(curMag)}_${dateStr()}.xlsx`:`все_объекты_${dateStr()}.xlsx`,'obj-exp-btn');
+}
+
+// ══ DUPLICATES ════════════════════════════════════════════════════════════════
+function findDuplicates(){
+  const fields=['SN Netbox','SN Lyra'],result={};
+  fields.forEach(field=>{
+    const map={};
+    allData.forEach(r=>{
+      const v=(r[field]||'').trim();
+      if(!v||v.toLowerCase().includes('не найден'))return;
+      if(!map[v])map[v]=[];map[v].push(r);
     });
+    result[field]=Object.entries(map).filter(([,rows])=>rows.length>1).sort((a,b)=>b[1].length-a[1].length);
+  });
+  return result;
+}
+
+function renderDuplicates(){
+  const dups=findDuplicates(),fields=['SN Netbox','SN Lyra'];
+  const counts=fields.map(f=>(dups[f]||[]).length),total=counts.reduce((s,c)=>s+c,0);
+  document.getElementById('dup-kpi-row').innerHTML=fields.map((f,i)=>
+    `<div class="dup-kpi"><div class="dup-kpi-v ${counts[i]>0?'err':'ok'}">${counts[i]}</div><div class="dup-kpi-l">Дублей ${f}</div></div>`
+  ).concat([`<div class="dup-kpi"><div class="dup-kpi-v ${total===0?'ok':'err'}">${total===0?'✓':total}</div><div class="dup-kpi-l">Итого дублей</div></div>`]).join('');
+
+  if(total===0){
+    document.getElementById('dup-content').innerHTML=`<div class="dup-ok">
+      <div style="font-size:48px;margin-bottom:14px">✅</div>
+      <div style="font-size:16px;font-weight:600;color:var(--ok);margin-bottom:6px">Дублей не обнаружено</div>
+      <div style="font-size:13px;color:var(--slate)">Все SN Netbox и SN Lyra уникальны</div>
+    </div>`;return;
   }
 
-  const tbody = sorted.map(r => {
-    const issues = r['_issues'];
-    const rowCls = issues > 1 ? 'row-err' : issues === 1 ? 'row-warn' : '';
-    const cells = cols.map(c => {
-      const v = r[c] || '';
-      if (c === 'Замечания') {
-        if (!v) return `<td></td>`;
-        const cls = issues > 1 ? 'badge-err' : 'badge-warn';
-        return `<td><span class="badge ${cls}">${v}</span></td>`;
-      }
-      if (c === 'IP Коммутатора') return `<td class="${v?'ip':'missing'}" title="${v}">${v||'—'}</td>`;
-      if (c === 'Коммутатор')     return `<td class="switch-name" title="${v}">${v}</td>`;
-      if (c === 'Mag' || c === 'Шкаф') return `<td class="mono" title="${v}">${v||'—'}</td>`;
-      if (c === 'SN Lyra') {
-        if (!v) return `<td class="missing" title="">—</td>`;
-        if (v.toLowerCase().includes('не найден')) return `<td class="mono" style="color:var(--err);font-weight:600" title="${v}">${v}</td>`;
-        return `<td class="mono" title="${v}">${v}</td>`;
-      }
-      if (c === 'SN Netbox') return `<td class="mono ${v?'':'missing'}" title="${v}">${v||'—'}</td>`;
-      return `<td title="${v}">${v||''}</td>`;
-    }).join('');
-    return `<tr class="${rowCls}">${cells}</tr>`;
-  }).join('');
+  let html=`<div style="padding:12px 26px;border-bottom:1px solid var(--border);display:flex;justify-content:flex-end">
+    <button class="export-btn" id="dup-exp-btn" onclick="exportDuplicates()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Скачать xlsx
+    </button></div>`;
 
-  document.getElementById('table-wrap').innerHTML = `
-    <table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>`;
+  fields.forEach(field=>{
+    const list=dups[field]||[];if(!list.length)return;
+    html+=`<div class="dup-section">
+      <div class="dup-sec-hdr"><span class="dup-field-name">${field}</span><span class="dup-cnt-badge">${list.length} дублей</span></div>
+      <div class="tw" style="border:1px solid var(--border);border-radius:8px;overflow:auto;max-height:380px">
+      <table><thead><tr><th style="cursor:default">Серийный номер</th><th style="cursor:default">×</th><th style="cursor:default">Коммутаторы</th><th style="cursor:default">Объекты</th></tr></thead>
+      <tbody>${list.map(([sn,rows])=>`<tr class="rerr">
+        <td class="mono" style="font-weight:600;color:var(--err)">${sn}</td>
+        <td class="mono" style="color:var(--err);font-weight:700">${rows.length}×</td>
+        <td>${rows.map(r=>`<span class="sw-chip">${r['Коммутатор']||'—'}</span>`).join(' ')}</td>
+        <td style="color:var(--slate)">${[...new Set(rows.map(r=>objLabel(r['Mag']||'?')))].join(', ')}</td>
+      </tr>`).join('')}</tbody></table></div></div>`;
+  });
+  document.getElementById('dup-content').innerHTML=html;
 }
 
-function applyTableFilter() {
-  if (currentMag !== null) renderDataTable();
-  else showSummary();
+function exportDuplicates(){
+  const dups=findDuplicates();
+  const rows=[['Поле','Серийный номер','Повторений','Коммутаторы','Объекты']];
+  ['SN Netbox','SN Lyra'].forEach(field=>{
+    (dups[field]||[]).forEach(([sn,items])=>{
+      rows.push([field,sn,items.length,items.map(r=>r['Коммутатор']||'—').join(', '),[...new Set(items.map(r=>objLabel(r['Mag']||'?')))].join(', ')]);
+    });
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:14},{wch:32},{wch:12},{wch:50},{wch:40}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Дубли SN');
+  XLSX.writeFile(wb,`дубли_SN_${dateStr()}.xlsx`);
+  const btn=document.getElementById('dup-exp-btn');
+  if(btn){const o=btn.innerHTML;btn.classList.add('done');btn.innerHTML='✓ Скачано';setTimeout(()=>{btn.classList.remove('done');btn.innerHTML=o;},2500);}
 }
 
-function toggleIssuesFilter() {
-  showIssuesOnly = !showIssuesOnly;
-  document.getElementById('issues-btn').classList.toggle('active', showIssuesOnly);
-  if (currentMag !== null) renderDataTable();
+// ══ TICKET GENERATION ════════════════════════════════════════════════════════
+function ticketHeader(subj){
+  const date=new Date().toLocaleDateString('ru-RU');
+  return ['ЗАЯВКА НА ВНЕСЕНИЕ ИНФОРМАЦИИ В ИНВЕНТАРИЗАЦИОННУЮ БАЗУ',
+    `Дата: ${date}`,'Тема: '+subj,'','Здравствуйте!',''].join('\n');
 }
 
-function sortBy(col) {
-  if (sortCol === col) { sortDesc = !sortDesc; }
-  else { sortCol = col; sortDesc = false; }
-  if (currentMag !== null) renderDataTable();
+function generateTicket(mag,sw){
+  const row=allData.find(r=>r['Mag']===mag&&r['Коммутатор']===sw);
+  if(!row||!row._issues)return;
+  const lines=[
+    ticketHeader('Актуализация данных — коммутатор '+sw),
+    'В ходе проверки инвентаризационной базы выявлены неполные данные',
+    'по сетевому оборудованию. Прошу предоставить недостающую информацию.',
+    '','─────────────────────────────────────────',
+    'Объект:       '+objLabel(mag),
+    'Коммутатор:   '+sw,
+  ];
+  if(row['IP Коммутатора'])  lines.push('IP-адрес:     '+row['IP Коммутатора']);
+  if(row['Модель SW'])       lines.push('Модель:       '+row['Модель SW']);
+  if(row['Расположение'])    lines.push('Расположение: '+row['Расположение']);
+  if(row['Шкаф'])            lines.push('Шкаф:         '+row['Шкаф']);
+  lines.push('─────────────────────────────────────────','Отсутствующие данные:');
+  row['Замечания'].split('; ').forEach(m=>lines.push('  ✗ '+m));
+  lines.push('','Прошу внести указанные данные в систему инвентаризации','в течение 3 рабочих дней.','','С уважением, ИТ-отдел');
+  showTicketModal(lines.join('\n'),'Заявка — '+sw,1);
 }
 
-function esc(s) { return s.replace(/\\/g,"\\\\").replace(/'/g,"\\'"); }
+function generateBatchTicket(mag){
+  if(!mag)return;
+  const rows=(grouped[mag]||[]).filter(r=>r._issues>0);
+  if(!rows.length)return;
+  const label=objLabel(mag);
+  const lines=[
+    ticketHeader('Актуализация данных — объект '+label),
+    'По результатам проверки инвентаризационной базы на объекте '+label,
+    'выявлено '+rows.length+' коммутатор(а/ов) с неполными данными.',
+    'Прошу предоставить недостающую информацию по каждому устройству.',
+    '','═════════════════════════════════════════',
+  ];
+  rows.forEach((r,i)=>{
+    const ipStr=r['IP Коммутатора']?' ('+r['IP Коммутатора']+')':'  (нет IP)';
+    lines.push((i+1)+'. '+r['Коммутатор']+ipStr);
+    if(r['Расположение'])lines.push('   Расположение: '+r['Расположение']);
+    if(r['Модель SW'])   lines.push('   Модель: '+r['Модель SW']);
+    lines.push('   Отсутствует:');
+    r['Замечания'].split('; ').forEach(m=>lines.push('     ✗ '+m));
+    if(i<rows.length-1)lines.push('');
+  });
+  lines.push('═════════════════════════════════════════','',
+    'Прошу внести указанные данные в систему инвентаризации',
+    'в течение 5 рабочих дней.','','С уважением, ИТ-отдел');
+  showTicketModal(lines.join('\n'),'Заявка — '+label+' ('+rows.length+' устройств)',rows.length);
+}
+
+function showTicketModal(text,title,count){
+  document.getElementById('ticket-title').textContent=title;
+  document.getElementById('ticket-text').value=text;
+  document.getElementById('tkt-hint').textContent=count>1?count+' устройств в заявке':'';
+  const btn=document.getElementById('copy-ticket-btn');
+  btn.innerHTML='📋 Скопировать в буфер';btn.classList.remove('ok');btn.style.background='';
+  const ov=document.getElementById('ticket-overlay'),m=document.getElementById('ticket-modal');
+  ov.style.display='block';m.style.display='flex';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ov.classList.add('open');m.classList.add('open');}));
+}
+
+function closeTicketModal(){
+  const ov=document.getElementById('ticket-overlay'),m=document.getElementById('ticket-modal');
+  ov.classList.remove('open');m.classList.remove('open');
+  setTimeout(()=>{ov.style.display='none';m.style.display='none';},220);
+}
+
+async function copyTicket(){
+  const text=document.getElementById('ticket-text').value;
+  try{await navigator.clipboard.writeText(text);}
+  catch{document.getElementById('ticket-text').select();document.execCommand('copy');}
+  const btn=document.getElementById('copy-ticket-btn');
+  btn.innerHTML='✓ Скопировано!';btn.classList.add('ok');
+  setTimeout(()=>{btn.innerHTML='📋 Скопировать в буфер';btn.classList.remove('ok');},2200);
+}
 </script>
 </body>
 </html>
