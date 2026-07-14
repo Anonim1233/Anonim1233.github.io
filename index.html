@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Switch Inspector</title>
+<title>Инвентаризация коммутаторов</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -423,7 +423,7 @@ tbody tr.is-done .sw{text-decoration:line-through;color:var(--slate-lt)!importan
     <line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>
     <line x1="10" y1="6" x2="14" y2="6"/><line x1="10" y1="18" x2="14" y2="18"/>
   </svg>
-  <span class="hdr-title">Switch Inspector</span>
+  <span class="hdr-title">Инвентаризация коммутаторов</span>
   <div class="gsw" id="gsw" style="display:none">
     <input type="text" id="gsearch" placeholder="Поиск по всей базе…" oninput="globalSearch(this.value)" onfocus="showGDrop()"/>
     <div class="gdrop" id="gdrop"></div>
@@ -474,6 +474,10 @@ tbody tr.is-done .sw{text-decoration:line-through;color:var(--slate-lt)!importan
     <div class="dash-section">
       <div class="sec-hdr"><span class="sec-title">Замечания по категориям</span><span style="font-size:11px;color:var(--slate)">Нажмите — фильтрует таблицу ниже</span></div>
       <div class="issue-grid" id="issue-cards"></div>
+    </div>
+    <div class="dash-section">
+      <div class="sec-hdr"><span class="sec-title">Прогресс по замечаниям</span><span class="d-count" id="prog-lbl"></span></div>
+      <div id="prog-content"></div>
     </div>
     <div class="dash-section">
       <div class="sec-title" style="margin-bottom:12px">Аналитика</div>
@@ -535,6 +539,7 @@ tbody tr.is-done .sw{text-decoration:line-through;color:var(--slate-lt)!importan
             Скачать xlsx
           </button>
           <button class="tbtn" id="batch-ticket-btn" style="display:none" onclick="generateBatchTicket(curMag)">📋 Заявка по объекту</button>
+          <button class="tbtn" id="copy-link-btn" style="display:none" onclick="copyObjectLink()" title="Скопировать ссылку на объект">🔗 Ссылка</button>
         </div>
         <div class="tw" id="main-tw"></div>
       </div>
@@ -749,7 +754,9 @@ function processFile(file){
       document.getElementById('main-nav').style.display='block';
       document.getElementById('upload-view').style.display='none';
       document.getElementById('main-view').style.display='flex';
-      switchView('dashboard');
+      // Navigate to anchor if present, otherwise dashboard
+      if(location.hash&&location.hash.length>1) applyHash();
+      else switchView('dashboard');
     }catch(err){
       document.getElementById('upload-view').innerHTML=`<div style="text-align:center;padding:80px">
         <div style="font-size:36px;margin-bottom:16px">⚠</div>
@@ -764,6 +771,7 @@ function processFile(file){
 // ══ NAVIGATION ═══════════════════════════════════════════════════════════════
 function switchView(v){
   curView=v;
+  history.replaceState(null,'','#'+v);
   document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',(i===0&&v==='dashboard')||(i===1&&v==='objects')||(i===2&&v==='dupes')));
   document.getElementById('dashboard-view').style.display=v==='dashboard'?'block':'none';
   document.getElementById('objects-view').style.display=v==='objects'?'flex':'none';
@@ -774,7 +782,7 @@ function switchView(v){
 }
 
 // ══ DASHBOARD ════════════════════════════════════════════════════════════════
-function renderDashboard(){renderDashKPI();renderIssueCards();renderCharts();renderModelStats();renderPortStats();renderChips();renderDashTable();applyResponsive();}
+function renderDashboard(){renderDashKPI();renderIssueCards();renderProgressSection();renderCharts();renderModelStats();renderPortStats();renderChips();renderDashTable();applyResponsive();}
 
 function renderDashKPI(){
   const t=allData.length,wi=allData.filter(r=>r._issues>0).length;
@@ -1012,12 +1020,14 @@ function filterSidebar(v){renderSidebar(v);}
 // ══ SUMMARY TABLE ════════════════════════════════════════════════════════════
 function showSummary(){
   curMag=null;showIssuesOnly=false;closeMobSidebar();
+  history.replaceState(null,'','#objects');
   hideDone=false;
   document.getElementById('hide-done-btn').classList.remove('active');
   document.getElementById('hide-done-btn').textContent='Скрыть обработанные';
   document.getElementById('issues-btn').classList.remove('active');
   document.getElementById('tb-search').value='';
   document.getElementById('batch-ticket-btn').style.display='none';
+  document.getElementById('copy-link-btn').style.display='none';
   document.getElementById('tbar-title').textContent='Все объекты — сводка';
   renderSidebar(document.getElementById('sb-search').value);
   const mags=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,'ru'));
@@ -1058,11 +1068,13 @@ function showSummary(){
 // ══ OBJECT DETAIL TABLE ═══════════════════════════════════════════════════════
 function showMag(mag){
   curMag=mag;showIssuesOnly=false;closeMobSidebar();
+  history.replaceState(null,'','#'+(prefixMap[mag]||'MAG')+mag);
   document.getElementById('issues-btn').classList.remove('active');
   document.getElementById('tb-search').value='';
   document.getElementById('tbar-title').textContent=objLabel(mag);
   const hasIssues=(grouped[mag]||[]).some(r=>r._issues>0);
   document.getElementById('batch-ticket-btn').style.display=hasIssues?'inline-block':'none';
+  document.getElementById('copy-link-btn').style.display='inline-block';
   renderSidebar(document.getElementById('sb-search').value);
   renderDataTable();
 }
@@ -1180,8 +1192,10 @@ function openCard(mag,sw){
       <div class="csec-t">Заметки <span class="note-hint">· хранятся в браузере</span></div>
       <textarea class="note-area" placeholder="Добавить заметку по этому коммутатору…" oninput="saveNoteFromCard(this.value)">${note}</textarea>
     </div>
-    ${row._issues>0?`<div class="csec"><button class="ticket-btn" onclick="generateTicket('${esc(mag)}','${esc(sw)}')">📋 Создать заявку на внесение данных</button></div>`:''}`;
-
+    ${row._issues>0?`<div class="csec"><button class="ticket-btn" onclick="generateTicket('${esc(mag)}','${esc(sw)}')">📋 Создать заявку на внесение данных</button></div>`:''}
+    <div class="csec" style="display:flex;gap:8px">
+      <button class="export-btn" style="width:100%;justify-content:center" onclick="printCard()">🖨 Распечатать карточку</button>
+    </div>`;
   const ov=document.getElementById('card-overlay'),dc=document.getElementById('detail-card');
   ov.style.display='block';dc.style.display='block';
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ov.classList.add('open');dc.classList.add('open');}));
@@ -1393,10 +1407,138 @@ function exportDuplicates(){
   if(btn){const o=btn.innerHTML;btn.classList.add('done');btn.innerHTML='✓ Скачано';setTimeout(()=>{btn.classList.remove('done');btn.innerHTML=o;},2500);}
 }
 
+// ══ PROGRESS SECTION ═════════════════════════════════════════════════════════
+function renderProgressSection(){
+  const el=document.getElementById('prog-content');
+  const lbl=document.getElementById('prog-lbl');
+  if(!el)return;
+  const all=allData.filter(r=>r._issues>0);
+  const total=all.length;
+  if(!total){el.innerHTML='<div style="color:var(--ok);font-size:13px;padding:4px 0">✓ Замечаний нет</div>';if(lbl)lbl.textContent='';return;}
+  const done=all.filter(r=>isProcessed(r['Mag'],r['Коммутатор'])).length;
+  const p=pct(done,total);
+  const color=p===100?'var(--ok)':p>=50?'var(--warn)':'var(--err)';
+  if(lbl)lbl.textContent=done+' из '+total+' обработано';
+
+  const objProg=Object.entries(grouped).map(([m,rows])=>{
+    const wi=rows.filter(r=>r._issues>0);
+    const d=wi.filter(r=>isProcessed(m,r['Коммутатор'])).length;
+    return{m,total:wi.length,done:d,remaining:wi.length-d};
+  }).filter(x=>x.total>0).sort((a,b)=>b.remaining-a.remaining);
+
+  const topRem=objProg.filter(x=>x.remaining>0).slice(0,8);
+  const fullyDone=objProg.filter(x=>x.remaining===0).length;
+
+  el.innerHTML=
+    '<div style="margin-bottom:'+(topRem.length?'18px':'0')+'">'+
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px">'+
+    '<span style="font-size:28px;font-weight:600;font-family:var(--mono);color:'+color+';line-height:1">'+p+'%</span>'+
+    '<span style="font-size:12px;color:var(--slate)">'+done+' / '+total+' замечаний</span></div>'+
+    '<div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:6px">'+
+    '<div style="height:100%;width:'+p+'%;background:'+color+';border-radius:4px;transition:width .5s"></div></div>'+
+    (fullyDone>0?'<span style="font-size:11px;color:var(--ok)">✓ Полностью закрыто объектов: '+fullyDone+'</span>':'')+
+    '</div>'+
+    (topRem.length?
+      '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--slate-lt);margin-bottom:8px;font-weight:600">Незакрытые объекты</div>'+
+      topRem.map(x=>{
+        const xp=pct(x.done,x.total);
+        return '<div style="display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="switchView(\'objects\');showMag(\''+esc(x.m)+'\')">'+
+          '<span style="font-family:var(--mono);font-size:11px;color:var(--text);width:72px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+objLabel(x.m)+'</span>'+
+          '<div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">'+
+          '<div style="height:100%;width:'+xp+'%;background:var(--ok);border-radius:3px"></div></div>'+
+          '<span style="font-family:var(--mono);font-size:11px;color:var(--err);flex-shrink:0;width:70px;text-align:right">'+x.remaining+' осталось</span></div>';
+      }).join('')
+    :'');
+}
+
+// ══ PRINT CARD ════════════════════════════════════════════════════════════════
+function printCard(){
+  if(!cardMag||!cardSw)return;
+  const row=allData.find(r=>r['Mag']===cardMag&&r['Коммутатор']===cardSw);
+  if(!row)return;
+  const up=parseInt(row['UP'])||0,dn=parseInt(row['DOWN'])||0;
+  const tot=up+dn,pU=tot?Math.round(up/tot*100):0;
+  const note=getNote(cardMag,cardSw);
+  const done=isProcessed(cardMag,cardSw);
+  const date=new Date().toLocaleDateString('ru-RU');
+  const pCol=pU>=80?'#EF4444':pU>=50?'#F59E0B':'#10B981';
+  const r=(lbl,v,mono)=>v
+    ?'<tr><td>'+lbl+'</td><td'+(mono?' style="font-family:monospace"':'')+'>'+v+'</td></tr>'
+    :'<tr><td>'+lbl+'</td><td style="color:#aaa;font-style:italic">—</td></tr>';
+  const w=window.open('','_blank','width=720,height=960');
+  if(!w)return;
+  w.document.write('<!DOCTYPE html><html lang="ru"><head>'
+    +'<meta charset="UTF-8"/><title>Карточка — '+cardSw+'</title>'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0}'
+    +'body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:22px 24px;max-width:680px}'
+    +'h1{font-size:20px;font-weight:700;margin-bottom:3px}'
+    +'.meta{font-size:11px;color:#777;margin-bottom:14px;display:flex;justify-content:space-between}'
+    +'.done{display:inline-block;padding:2px 10px;border-radius:4px;font-size:10px;font-weight:700;margin-bottom:12px;background:#ECFDF5;color:#059669;border:1px solid #6EE7B7}'
+    +'.wb{padding:8px 12px;border-left:3px solid #F59E0B;background:#FFFBEB;margin-bottom:14px;font-size:11px;line-height:1.5}'
+    +'.eb{border-color:#EF4444;background:#FEF2F2}'
+    +'h2{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#999;font-weight:700;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid #e5e5e5}'
+    +'table{width:100%;border-collapse:collapse}'
+    +'td{padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px;vertical-align:top}'
+    +'td:first-child{color:#666;width:115px;padding-right:12px}'
+    +'.pb{width:100%;height:6px;background:#eee;border-radius:3px;overflow:hidden;margin-top:3px}'
+    +'.pf{height:100%;border-radius:3px;background:'+pCol+'}'
+    +'.nb{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:10px 12px;margin-top:14px;font-size:11px;line-height:1.6;white-space:pre-wrap}'
+    +'.nl{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#999;font-weight:700;margin-bottom:4px}'
+    +'.ft{margin-top:18px;padding-top:8px;border-top:1px solid #eee;font-size:9px;color:#bbb;display:flex;justify-content:space-between}'
+    +'@media print{@page{margin:12mm 14mm}}</style></head><body>'
+    +'<h1>'+cardSw+'</h1>'
+    +'<div class="meta"><span>'+objLabel(cardMag)+'</span><span>Распечатано: '+date+'</span></div>'
+    +(done?'<span class="done">✓ Обработано</span>':'')
+    +(row._issues>0?'<div class="wb'+(row._issues>=2?' eb':'')+'">⚠ '+row['Замечания']+'</div>':'')
+    +'<h2>Сетевые данные</h2><table>'
+    +r('IP-адрес',row['IP Коммутатора'],true)
+    +r('Расположение',row['Расположение'],false)
+    +r('Шкаф',row['Шкаф'],true)
+    +'</table><h2>Идентификация</h2><table>'
+    +r('Модель SW',row['Модель SW'],false)
+    +r('SN Netbox',row['SN Netbox'],true)
+    +r('SN Lyra',row['SN Lyra'],true)
+    +(row['Комментарий']?r('Комментарий',row['Комментарий'],false):'')
+    +'</table>'
+    +(tot>0?'<h2>Порты</h2><table>'
+      +'<tr><td>Активных (UP)</td><td style="color:#059669;font-weight:700">'+up+'</td></tr>'
+      +'<tr><td>Свободных (DOWN)</td><td>'+dn+'</td></tr>'
+      +'<tr><td>Утилизация</td><td>'+pU+'%<div class="pb"><div class="pf" style="width:'+pU+'%"></div></div></td></tr>'
+      +'</table>':'')
+    +(note?'<div class="nb"><div class="nl">Заметка</div>'+note+'</div>':'')
+    +'<div class="ft"><span>LEMANAPRO · Инвентаризация коммутаторов</span><span>'+date+'</span></div>'
+    +'<script>window.addEventListener("load",function(){window.print();});<\/script>'
+    +'</body></html>');
+  w.document.close();
+}
+
+// ══ ANCHOR LINKS ══════════════════════════════════════════════════════════════
+function applyHash(){
+  const hash=decodeURIComponent(location.hash.slice(1));
+  if(!hash||!allData.length)return;
+  if(hash==='dupes'){switchView('dupes');return;}
+  if(hash==='objects'){switchView('objects');return;}
+  if(hash==='dashboard'||hash===''){switchView('dashboard');return;}
+  for(const [mag] of Object.entries(grouped)){
+    const label=(prefixMap[mag]||'MAG')+mag;
+    if(hash===label||hash===mag){switchView('objects');showMag(mag);return;}
+  }
+}
+
+async function copyObjectLink(){
+  const url=location.href.split('#')[0]+(curMag?'#'+(prefixMap[curMag]||'MAG')+curMag:'#objects');
+  try{await navigator.clipboard.writeText(url);}
+  catch{const t=document.createElement('textarea');t.value=url;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);}
+  const btn=document.getElementById('copy-link-btn');
+  if(!btn)return;
+  const o=btn.textContent;btn.textContent='✓ Скопировано';
+  setTimeout(()=>{btn.textContent=o;},1800);
+}
+
 // ══ TICKET GENERATION ════════════════════════════════════════════════════════
 function ticketHeader(subj){
   const date=new Date().toLocaleDateString('ru-RU');
-  return ['Заявка на внесение информации в PowerBI отчет',
+  return ['ЗАЯВКА НА ВНЕСЕНИЕ ИНФОРМАЦИИ В ИНВЕНТАРИЗАЦИОННУЮ БАЗУ',
     `Дата: ${date}`,'Тема: '+subj,'','Здравствуйте!',''].join('\n');
 }
 
@@ -1405,7 +1547,7 @@ function generateTicket(mag,sw){
   if(!row||!row._issues)return;
   const lines=[
     ticketHeader('Актуализация данных — коммутатор '+sw),
-    'В ходе проверки PowerBI отчета выявлены неполные данные',
+    'В ходе проверки инвентаризационной базы выявлены неполные данные',
     'по сетевому оборудованию. Прошу предоставить недостающую информацию.',
     '','─────────────────────────────────────────',
     'Объект:       '+objLabel(mag),
@@ -1417,6 +1559,7 @@ function generateTicket(mag,sw){
   if(row['Шкаф'])            lines.push('Шкаф:         '+row['Шкаф']);
   lines.push('─────────────────────────────────────────','Отсутствующие данные:');
   row['Замечания'].split('; ').forEach(m=>lines.push('  ✗ '+m));
+  lines.push('','Прошу внести указанные данные в систему инвентаризации','в течение 3 рабочих дней.','','С уважением, ИТ-отдел');
   showTicketModal(lines.join('\n'),'Заявка — '+sw,1);
 }
 
@@ -1427,7 +1570,7 @@ function generateBatchTicket(mag){
   const label=objLabel(mag);
   const lines=[
     ticketHeader('Актуализация данных — объект '+label),
-    'По результатам проверки PowerBI отчета на объекте '+label,
+    'По результатам проверки инвентаризационной базы на объекте '+label,
     'выявлено '+rows.length+' коммутатор(а/ов) с неполными данными.',
     'Прошу предоставить недостающую информацию по каждому устройству.',
     '','═════════════════════════════════════════',
@@ -1441,6 +1584,9 @@ function generateBatchTicket(mag){
     r['Замечания'].split('; ').forEach(m=>lines.push('     ✗ '+m));
     if(i<rows.length-1)lines.push('');
   });
+  lines.push('═════════════════════════════════════════','',
+    'Прошу внести указанные данные в систему инвентаризации',
+    'в течение 5 рабочих дней.','','С уважением, ИТ-отдел');
   showTicketModal(lines.join('\n'),'Заявка — '+label+' ('+rows.length+' устройств)',rows.length);
 }
 
