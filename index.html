@@ -1506,7 +1506,7 @@ function printCard(){
       +'<tr><td>Утилизация</td><td>'+pU+'%<div class="pb"><div class="pf" style="width:'+pU+'%"></div></div></td></tr>'
       +'</table>':'')
     +(note?'<div class="nb"><div class="nl">Заметка</div>'+note+'</div>':'')
-    +'<div class="ft"><span>LEMANAPRO · Инвентаризация коммутаторов</span><span>'+date+'</span></div>'
+    +'<div class="ft"><span>LEMANAPRO · Switch Inspector</span><span>'+date+'</span></div>'
     +'<script>window.addEventListener("load",function(){window.print();});<\/script>'
     +'</body></html>');
   w.document.close();
@@ -1569,7 +1569,7 @@ function generateBatchTicket(mag){
   const label=objLabel(mag);
   const lines=[
     ticketHeader('Актуализация данных — объект '+label),
-    'По результатам проверки инвентаризационной базы на объекте '+label,
+    'По результатам проверки отчета PowerBI на объекте '+label,
     'выявлено '+rows.length+' коммутатор(а/ов) с неполными данными.',
     'Прошу предоставить недостающую информацию по каждому устройству.',
     '','═════════════════════════════════════════',
