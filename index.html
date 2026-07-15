@@ -414,6 +414,32 @@ tbody tr.is-done .sw{text-decoration:line-through;color:var(--slate-lt)!importan
 .note-area{width:100%;min-height:72px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--sans);font-size:12px;color:var(--text);background:var(--bg);resize:vertical;outline:none;transition:border-color .15s;line-height:1.5}
 .note-area:focus{border-color:var(--blue)}
 .note-hint{font-size:9px;color:var(--slate-lt);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px}
+
+/* ── DIVISION VIEW ── */
+#divs-view{flex:1;overflow-y:auto;background:var(--bg);display:none}
+.div-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;padding:4px 0}
+.div-card{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all .15s}
+.div-card:hover{border-color:var(--blue);box-shadow:0 2px 14px var(--shadow);transform:translateY(-1px)}
+.div-card.has-issues{border-left:3px solid var(--err)}
+.div-name{font-size:20px;font-weight:700;color:var(--text);margin-bottom:3px;font-family:var(--mono)}
+.div-meta{font-size:11px;color:var(--slate);margin-bottom:12px}
+.div-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:7px}
+.div-row-lbl{font-size:11px;color:var(--slate)}
+.div-row-val{font-family:var(--mono);font-size:15px;font-weight:600}
+.div-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:3px}
+.div-bar-fill{height:100%;border-radius:2px}
+.div-back{font-size:12px;color:#7ea8c9;margin-bottom:5px;cursor:pointer}
+.div-back:hover{color:#a8d0ea}
+@media(max-width:640px){.div-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:380px){.div-grid{grid-template-columns:1fr}}
+
+/* ── EQUIPMENT (NETBOX) ── */
+#equip-view{flex:1;overflow-y:auto;background:var(--bg);display:none}
+.equip-upload-wrap{display:flex;align-items:center;justify-content:center;min-height:60vh;padding:20px}
+.equip-cat-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px}
+.status-active{color:var(--ok)}.status-off{color:var(--err)}.status-fault{color:var(--err);font-weight:700}
+.status-other{color:var(--slate)}
+.equip-toolbar{padding:8px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;background:var(--card-bg);flex-shrink:0;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -445,6 +471,14 @@ tbody tr.is-done .sw{text-decoration:line-through;color:var(--slate-lt)!importan
     <button class="nav-tab" onclick="switchView('dupes')">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="4"/><circle cx="16" cy="16" r="4"/><line x1="11" y1="11" x2="13" y2="13"/></svg>
       Дубли SN<span class="tab-badge" id="dup-badge" style="display:none">0</span>
+    </button>
+    <button class="nav-tab" onclick="switchView('divs')" id="divs-tab" style="display:none">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9" y1="14.5" x2="15" y2="14.5"/></svg>
+      Дивизионы
+    </button>
+    <button class="nav-tab" onclick="switchView('equip')" id="equip-tab" style="display:none">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="9" y1="2" x2="9" y2="4"/><line x1="15" y1="2" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="22"/><line x1="15" y1="20" x2="15" y2="22"/><line x1="20" y1="9" x2="22" y2="9"/><line x1="20" y1="14" x2="22" y2="14"/><line x1="2" y1="9" x2="4" y2="9"/><line x1="2" y1="14" x2="4" y2="14"/></svg>
+      Оборудование
     </button>
   </div>
 </nav>
@@ -553,6 +587,85 @@ tbody tr.is-done .sw{text-decoration:line-through;color:var(--slate-lt)!importan
     </div>
     <div id="dup-content"></div>
   </div>
+
+  <div id="divs-view">
+    <div id="div-list-view">
+      <div class="dash-top">
+        <div class="dash-top-lbl">Дашборд по дивизионам</div>
+        <div class="dash-kpi-row" id="divs-global-kpi"></div>
+      </div>
+      <div class="dash-section">
+        <div class="sec-hdr">
+          <span class="sec-title">Выберите дивизион</span>
+          <span class="d-count" id="divs-lbl"></span>
+        </div>
+        <div class="div-grid" id="div-cards"></div>
+      </div>
+    </div>
+    <div id="div-detail-view" style="display:none">
+      <div class="dash-top">
+        <div class="div-back" onclick="showDivList()">← Все дивизионы</div>
+        <div class="dash-top-lbl" id="div-detail-name"></div>
+        <div class="dash-kpi-row" id="div-detail-kpi"></div>
+      </div>
+      <div class="dash-section">
+        <div class="sec-hdr">
+          <span class="sec-title" id="div-detail-subtitle"></span>
+          <input type="text" class="dash-search" id="div-store-search" placeholder="Поиск магазина…" oninput="filterDivStores(this.value)"/>
+        </div>
+        <div class="tw" id="div-detail-table" style="max-height:65vh;border:1px solid var(--border);border-radius:8px;overflow:auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="equip-view">
+    <div id="equip-upload-view">
+      <div class="equip-upload-wrap">
+        <div class="upload-card" id="equip-drop-zone">
+          <div class="up-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="4" width="16" height="16" rx="2"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/>
+            </svg>
+          </div>
+          <h2>Загрузите выгрузку NetBox</h2>
+          <p>CSV-файл со всем прочим оборудованием:<br/>серверы, СХД, firewall, Wi-Fi и т.д.</p>
+          <button class="upload-btn" onclick="document.getElementById('equip-fi').click()">Выбрать CSV</button>
+          <input type="file" id="equip-fi" accept=".csv" style="display:none"/>
+          <p class="upload-hint">Обрабатывается локально в браузере</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="equip-cat-view" style="display:none">
+      <div class="dash-top">
+        <div class="dash-top-lbl">Оборудование по данным NetBox</div>
+        <div class="dash-kpi-row" id="equip-global-kpi"></div>
+      </div>
+      <div class="dash-section">
+        <div class="sec-hdr"><span class="sec-title">Категории оборудования</span><span class="d-count" id="equip-cats-lbl"></span></div>
+        <div class="div-grid" id="equip-cat-cards"></div>
+      </div>
+    </div>
+
+    <div id="equip-detail-view" style="display:none">
+      <div class="dash-top">
+        <div class="div-back" onclick="showEquipCatList()">← Все категории</div>
+        <div class="dash-top-lbl" id="equip-detail-name"></div>
+        <div class="dash-kpi-row" id="equip-detail-kpi"></div>
+      </div>
+      <div class="equip-toolbar">
+        <span class="row-count" id="equip-row-count"></span>
+        <input type="text" class="tb-search" id="equip-search" placeholder="Поиск…" oninput="renderEquipTable()" style="margin-left:auto"/>
+        <button class="tbtn" id="equip-issues-btn" onclick="toggleEquipIssues()">⚠ Только с замечаниями</button>
+        <button class="export-btn" onclick="exportEquipCurrent()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          xlsx
+        </button>
+      </div>
+      <div class="tw" id="equip-detail-table" style="max-height:70vh"></div>
+    </div>
+  </div>
+
 </div>
 
 <div id="card-overlay" onclick="closeCard()"></div>
@@ -596,6 +709,9 @@ let sortCol=null,sortDesc=false;
 let hideDone=false, cardMag=null, cardSw=null;
 
 // ══ HELPERS ══════════════════════════════════════════════════════════════════
+function safeHash(h){
+  try{ history.replaceState(null,'','#'+h); }catch(e){ /* sandboxed preview: History API blocked, ignore */ }
+}
 const objLabel=m=>`${prefixMap[m]||'MAG'} ${m}`;
 const esc=s=>String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 const pct=(n,t)=>t?Math.round(n/t*100):0;
@@ -687,19 +803,21 @@ function toggleHideDone(){
 // ══ THEME ════════════════════════════════════════════════════════════════════
 function toggleTheme(){
   const dark=document.documentElement.classList.toggle('dark');
-  localStorage.setItem('sw-theme',dark?'dark':'light');
+  try{ localStorage.setItem('sw-theme',dark?'dark':'light'); }catch(e){}
   document.getElementById('theme-btn').textContent=dark?'☀️':'🌙';
   document.getElementById('theme-btn').title=dark?'Светлая тема':'Тёмная тема';
   if(allData.length){renderCharts();renderModelStats();}
 }
 (function initTheme(){
-  const saved=localStorage.getItem('sw-theme');
-  const sys=window.matchMedia('(prefers-color-scheme: dark)').matches;
-  if(saved==='dark'||(saved===null&&sys)){
-    document.documentElement.classList.add('dark');
-    document.getElementById('theme-btn').textContent='☀️';
-    document.getElementById('theme-btn').title='Светлая тема';
-  }
+  try{
+    var saved=localStorage.getItem('sw-theme');
+    var sys=window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if(saved==='dark'||(saved===null&&sys)){
+      document.documentElement.classList.add('dark');
+      document.getElementById('theme-btn').textContent='☀️';
+      document.getElementById('theme-btn').title='Светлая тема';
+    }
+  }catch(e){ /* sandboxed preview: localStorage/matchMedia blocked, default to light theme */ }
 })();
 
 // ══ UPLOAD ═══════════════════════════════════════════════════════════════════
@@ -752,6 +870,8 @@ function processFile(file){
       const mob=()=>(window.innerWidth||document.documentElement.clientWidth)<=640;
       document.getElementById('gsw').style.display=mob()?'none':'block';
       document.getElementById('main-nav').style.display='block';
+      if(Object.keys(DIV_MAP).length>0)document.getElementById('divs-tab').style.display='flex';
+      document.getElementById('equip-tab').style.display='flex';
       document.getElementById('upload-view').style.display='none';
       document.getElementById('main-view').style.display='flex';
       // Navigate to anchor if present, otherwise dashboard
@@ -771,14 +891,18 @@ function processFile(file){
 // ══ NAVIGATION ═══════════════════════════════════════════════════════════════
 function switchView(v){
   curView=v;
-  history.replaceState(null,'','#'+v);
-  document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',(i===0&&v==='dashboard')||(i===1&&v==='objects')||(i===2&&v==='dupes')));
+  safeHash(v);
+  document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',(i===0&&v==='dashboard')||(i===1&&v==='objects')||(i===2&&v==='dupes')||(i===3&&v==='divs')||(i===4&&v==='equip')));
   document.getElementById('dashboard-view').style.display=v==='dashboard'?'block':'none';
   document.getElementById('objects-view').style.display=v==='objects'?'flex':'none';
   document.getElementById('dupes-view').style.display=v==='dupes'?'block':'none';
+  document.getElementById('divs-view').style.display=v==='divs'?'block':'none';
+  document.getElementById('equip-view').style.display=v==='equip'?'block':'none';
   if(v==='dashboard')renderDashboard();
   else if(v==='objects'){renderKPI();renderSidebar();if(curMag)renderDataTable();else showSummary();}
   else if(v==='dupes')renderDuplicates();
+  else if(v==='divs')renderDivs();
+  else if(v==='equip'){ if(equipData.length){ if(curEquipCat) renderEquipTable(); } }
 }
 
 // ══ DASHBOARD ════════════════════════════════════════════════════════════════
@@ -1020,7 +1144,7 @@ function filterSidebar(v){renderSidebar(v);}
 // ══ SUMMARY TABLE ════════════════════════════════════════════════════════════
 function showSummary(){
   curMag=null;showIssuesOnly=false;closeMobSidebar();
-  history.replaceState(null,'','#objects');
+  safeHash('objects');
   hideDone=false;
   document.getElementById('hide-done-btn').classList.remove('active');
   document.getElementById('hide-done-btn').textContent='Скрыть обработанные';
@@ -1068,7 +1192,7 @@ function showSummary(){
 // ══ OBJECT DETAIL TABLE ═══════════════════════════════════════════════════════
 function showMag(mag){
   curMag=mag;showIssuesOnly=false;closeMobSidebar();
-  history.replaceState(null,'','#'+(prefixMap[mag]||'MAG')+mag);
+  safeHash((prefixMap[mag]||'MAG')+mag);
   document.getElementById('issues-btn').classList.remove('active');
   document.getElementById('tb-search').value='';
   document.getElementById('tbar-title').textContent=objLabel(mag);
@@ -1407,6 +1531,397 @@ function exportDuplicates(){
   if(btn){const o=btn.innerHTML;btn.classList.add('done');btn.innerHTML='✓ Скачано';setTimeout(()=>{btn.classList.remove('done');btn.innerHTML=o;},2500);}
 }
 
+
+// ══ DIVISION MAP ═════════════════════════════════════════════════════════════
+// Редактируйте этот объект: добавляйте номера MAG/DS для каждого дивизиона
+const DIV_MAP = {
+  'DIV 1': ['010','011','041','042','078','079','083','134','135','136','137','138','139','140','141','156','253'],
+  'DIV 2': ['002','004','028','252','049','153','169','257','262','065'],
+  'DIV 3':  ['006','020','022','026','043','086','114','117','143','062','912'],
+  'DIV 4':  ['016','025','031','038','053','087','088','109','110','131','261'],
+  'DIV 5':  ['019','021','047','048','057','111','119','127','142','155','159','181'],
+  'DIV 6':  ['018','052','058','059','091','093','126','164'],
+  'DIV 7':  ['012','030','036','044','067','089','113','124','129','256','906'],
+  'DIV 8':  ['007','008','014','024','069','070','073','090','092','094','254','147','255','150','165'],
+  'DIV 9':  ['009​','013','017','027','033','034','039','046','071','074','077','080','115','163','259','264','908'],
+  'DIV 10': ['003','00​5','0​32','035','040','0​51','056','118','122','125','251','922','267'],
+  'DIV 11': ['0​23','0​37','0​55','0​68','0​75','081','082','123','128','913','263','260'],
+  'HDCO':   ['001'],
+};
+
+let curDiv = null;
+
+function noLyra(r){
+  const v=(r['SN Lyra']||'').trim();
+  return !v || v.toLowerCase().includes('\u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d');
+}
+
+function getDivMags(div){
+  return (DIV_MAP[div]||[]).filter(function(m){return !!grouped[m];});
+}
+
+function getDivStats(div){
+  var mags = getDivMags(div);
+  var rows = [].concat.apply([], mags.map(function(m){return grouped[m];}));
+  var total = rows.length;
+  var noSNL = rows.filter(noLyra).length;
+  var issues = rows.filter(function(r){return r._issues>0;}).length;
+  return {div:div, mags:mags, total:total, noSNL:noSNL, issues:issues, compl:pct(total-issues,total)};
+}
+
+function clickDivCard(el){ showDivDetail(el.getAttribute('data-div')); }
+function clickStoreRow(el){ switchView('objects'); showMag(el.getAttribute('data-mag')); }
+
+function renderDivs(){
+  var divNames = Object.keys(DIV_MAP).sort(function(a,b){return a.localeCompare(b,'ru',{numeric:true});});
+  if(!divNames.length) return;
+
+  var allMags = [];
+  divNames.forEach(function(d){ getDivMags(d).forEach(function(m){ if(allMags.indexOf(m)<0)allMags.push(m); }); });
+  var allRows = [].concat.apply([], allMags.map(function(m){return grouped[m];}));
+  var gTotal = allRows.length;
+  var gNoSNL = allRows.filter(noLyra).length;
+  var pNoSNL = pct(gNoSNL, gTotal);
+
+  document.getElementById('divs-global-kpi').innerHTML = [
+    {v:divNames.length, l:'\u0414\u0438\u0432\u0438\u0437\u0438\u043e\u043d\u043e\u0432', c:''},
+    {v:allMags.length,  l:'\u041e\u0431\u044a\u0435\u043a\u0442\u043e\u0432', c:''},
+    {v:gTotal,          l:'\u041a\u043e\u043c\u043c\u0443\u0442\u0430\u0442\u043e\u0440\u043e\u0432', c:''},
+    {v:gNoSNL,          l:'\u0411\u0435\u0437 SN Lyra', c:gNoSNL?'err':''},
+    {v:pNoSNL+'%',      l:'\u0414\u043e\u043b\u044f \u0431\u0435\u0437 SN Lyra', c:pNoSNL>20?'err':pNoSNL>5?'warn':''},
+  ].map(function(k){return '<div class="dkpi"><div class="dkpi-v '+k.c+'">'+k.v+'</div><div class="dkpi-l">'+k.l+'</div></div>';}).join('');
+
+  document.getElementById('divs-lbl').textContent = '\u041a\u043e\u043d\u0444\u0438\u0433\u0443\u0440\u0438\u0440\u043e\u0432\u0430\u043d\u043e: '+divNames.length+' \u0438\u0437 11 \u0434\u0438\u0432\u0438\u0437\u0438\u043e\u043d\u043e\u0432';
+
+  document.getElementById('div-cards').innerHTML = divNames.map(function(div){
+    var s = getDivStats(div);
+    var lyraColor = s.noSNL===0 ? 'var(--ok)' : s.noSNL>10 ? 'var(--err)' : 'var(--warn)';
+    var compColor = s.compl===100 ? 'var(--ok)' : s.compl>70 ? 'var(--warn)' : 'var(--err)';
+    var lyraP = pct(s.noSNL, s.total||1);
+    var mag_word = s.mags.length===1 ? '\u043e\u0431\u044a\u0435\u043a\u0442' : '\u043e\u0431\u044a\u0435\u043a\u0442\u043e\u0432';
+    return '<div class="div-card'+(s.noSNL>0?' has-issues':'')+'" data-div="'+div+'" onclick="clickDivCard(this)">'
+      +'<div class="div-name">'+div+'</div>'
+      +'<div class="div-meta">'+s.mags.length+' '+mag_word+' \xb7 '+s.total+' \u043a\u043e\u043c\u043c.</div>'
+      +'<div class="div-row"><span class="div-row-lbl">\u0411\u0435\u0437 SN Lyra</span>'
+      +'<span class="div-row-val" style="color:'+lyraColor+'">'+s.noSNL+'</span></div>'
+      +'<div class="div-bar"><div class="div-bar-fill" style="width:'+lyraP+'%;background:'+lyraColor+'"></div></div>'
+      +'<div class="div-row" style="margin-top:10px"><span class="div-row-lbl">\u0417\u0430\u043f\u043e\u043b\u043d\u0435\u043d\u043d\u043e\u0441\u0442\u044c</span>'
+      +'<span class="div-row-val" style="color:'+compColor+'">'+s.compl+'%</span></div>'
+      +'<div class="div-bar"><div class="div-bar-fill" style="width:'+s.compl+'%;background:'+compColor+'"></div></div>'
+      +'</div>';
+  }).join('');
+
+  document.getElementById('div-list-view').style.display = 'block';
+  document.getElementById('div-detail-view').style.display = 'none';
+}
+
+var _divStoreFilter = '';
+function filterDivStores(q){ _divStoreFilter=q.toLowerCase(); renderDivStoreTable(curDiv); }
+
+function renderDivStoreTable(div){
+  var s = getDivStats(div);
+  var mags = s.mags.slice().sort(function(a,b){return a.localeCompare(b,'ru',{numeric:true});});
+  if(_divStoreFilter) mags = mags.filter(function(m){return objLabel(m).toLowerCase().indexOf(_divStoreFilter)>=0;});
+
+  document.getElementById('div-detail-subtitle').textContent = mags.length+' \u043e\u0431\u044a\u0435\u043a\u0442\u043e\u0432 \u0432 \u0434\u0438\u0432\u0438\u0437\u0438\u043e\u043d\u0435';
+
+  var thead = '<tr>'
+    +'<th style="cursor:default">\u041e\u0431\u044a\u0435\u043a\u0442</th>'
+    +'<th style="cursor:default">\u041a\u043e\u043c\u043c.</th>'
+    +'<th style="cursor:default">\u0411\u0435\u0437 SN Lyra</th>'
+    +'<th style="cursor:default">% \u0431\u0435\u0437 SN</th>'
+    +'<th style="cursor:default">\u0417\u0430\u043c\u0435\u0447\u0430\u043d\u0438\u0439</th>'
+    +'<th style="cursor:default">\u0417\u0430\u043f\u043e\u043b\u043d\u0435\u043d\u043d\u043e\u0441\u0442\u044c</th>'
+    +'</tr>';
+
+  var tbody = mags.map(function(mag){
+    var rows = grouped[mag]||[];
+    var noSNL = rows.filter(noLyra).length;
+    var issues = rows.filter(function(r){return r._issues>0;}).length;
+    var ok = pct(rows.length-issues, rows.length);
+    var lyraP = pct(noSNL, rows.length);
+    var lyraColor = noSNL===0 ? 'var(--ok)' : noSNL>5 ? 'var(--err)' : 'var(--warn)';
+    var okColor = ok===100 ? '#10B981' : ok>70 ? '#F59E0B' : '#EF4444';
+    return '<tr data-mag="'+mag+'" onclick="clickStoreRow(this)" style="cursor:pointer">'
+      +'<td class="mono">'+objLabel(mag)+'</td>'
+      +'<td class="mono" style="font-weight:600;color:var(--text)">'+rows.length+'</td>'
+      +'<td style="color:'+lyraColor+';font-family:var(--mono);font-weight:600">'+(noSNL||'\u2014')+'</td>'
+      +'<td style="color:'+lyraColor+';font-family:var(--mono)">'+(noSNL?lyraP+'%':'\u2014')+'</td>'
+      +'<td class="'+(issues?'cnt-warn':'cnt-ok')+'">'+(issues||'\u2014')+'</td>'
+      +'<td><div class="obj-comp"><div class="bar-track"><div class="bar-fill" style="width:'+ok+'%;background:'+okColor+'"></div></div><span class="cpct">'+ok+'%</span></div></td>'
+      +'</tr>';
+  }).join('');
+
+  document.getElementById('div-detail-table').innerHTML = '<table><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table>';
+}
+
+function showDivDetail(div){
+  curDiv = div;
+  _divStoreFilter = '';
+  safeHash(div.replace(/ /g,''));
+  var s = getDivStats(div);
+  var lyraColor = s.noSNL===0 ? 'var(--ok)' : s.noSNL>10 ? 'var(--err)' : 'var(--warn)';
+  document.getElementById('div-detail-name').textContent = div;
+  document.getElementById('div-store-search').value = '';
+  document.getElementById('div-detail-kpi').innerHTML = [
+    {v:s.mags.length, l:'\u041e\u0431\u044a\u0435\u043a\u0442\u043e\u0432', c:''},
+    {v:s.total,       l:'\u041a\u043e\u043c\u043c\u0443\u0442\u0430\u0442\u043e\u0440\u043e\u0432', c:''},
+    {v:s.noSNL,       l:'\u0411\u0435\u0437 SN Lyra', c:s.noSNL?'err':''},
+    {v:pct(s.noSNL,s.total||1)+'%', l:'\u0414\u043e\u043b\u044f \u0431\u0435\u0437 SN Lyra', c:s.noSNL?'warn':''},
+    {v:s.compl+'%',   l:'\u0417\u0430\u043f\u043e\u043b\u043d\u0435\u043d\u043d\u043e\u0441\u0442\u044c', c:s.compl<80?'warn':''},
+  ].map(function(k){return '<div class="dkpi"><div class="dkpi-v '+k.c+'">'+k.v+'</div><div class="dkpi-l">'+k.l+'</div></div>';}).join('');
+  renderDivStoreTable(div);
+  document.getElementById('div-list-view').style.display = 'none';
+  document.getElementById('div-detail-view').style.display = 'block';
+}
+
+function showDivList(){
+  curDiv = null;
+  safeHash('divs');
+  renderDivs();
+}
+
+// ══ EQUIPMENT (NETBOX CSV) ═══════════════════════════════════════════════════
+const EQUIP_CATEGORIES = {
+  switches:  {label:'\u0421\u0432\u0438\u0442\u0447\u0438 (NetBox)',           roles:['access_switch','core_switch','dc_switch','dc_core','dc_san_switch'], cols:['IP-\u0430\u0434\u0440\u0435\u0441','\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440']},
+  network:   {label:'\u0420\u043e\u0443\u0442\u0435\u0440\u044b / \u0431\u0430\u043b\u0430\u043d\u0441\u0438\u0440\u043e\u0432\u0449\u0438\u043a\u0438', roles:['border_router','wan_router','Balancer'], cols:['IP-\u0430\u0434\u0440\u0435\u0441','\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440']},
+  security:  {label:'Firewall / ISE',                    roles:['firewall','ise'], cols:['IP-\u0430\u0434\u0440\u0435\u0441','\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440']},
+  wifi:      {label:'Wi-Fi \u043a\u043e\u043d\u0442\u0440\u043e\u043b\u043b\u0435\u0440\u044b',           roles:['wifi_controller'], cols:['IP-\u0430\u0434\u0440\u0435\u0441']},
+  servers:   {label:'\u0421\u0435\u0440\u0432\u0435\u0440\u0430 \u0438 \u0432\u0438\u0440\u0442\u0443\u0430\u043b\u0438\u0437\u0430\u0446\u0438\u044f', roles:['server','hypervisor','backup_server','MediaAgent','gpu_server'], cols:['\u0421\u0442\u043e\u0439\u043a\u0430','\u041f\u043e\u0437\u0438\u0446\u0438\u044f','\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440']},
+  storage:   {label:'\u0421\u0425\u0414',                                 roles:['storage'], cols:['IP-\u0430\u0434\u0440\u0435\u0441','\u0421\u0442\u043e\u0439\u043a\u0430']},
+  telephony: {label:'\u0422\u0435\u043b\u0435\u0444\u043e\u043d\u0438\u044f (DECT)',              roles:['bs_dect','telephony'], cols:['IP-\u0430\u0434\u0440\u0435\u0441','\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440']},
+  infra:     {label:'\u041f\u0438\u0442\u0430\u043d\u0438\u0435 \u0438 \u043f\u0430\u0441\u0441\u0438\u0432\u043d\u043e\u0435',        roles:['bbu','rack_pdu','ats','ups','blanking_panel','patch_panel','cable_organizer','kvm','shelf-19','usb-hub','console_server'], cols:['\u0421\u0442\u043e\u0439\u043a\u0430','\u041f\u043e\u0437\u0438\u0446\u0438\u044f']},
+};
+const EQUIP_CAT_ORDER = ['switches','network','security','wifi','servers','storage','telephony','infra'];
+
+let equipData=[], equipGrouped={}, curEquipCat=null;
+let equipShowIssuesOnly=false, equipSortCol=null, equipSortDesc=false;
+
+function equipRoleToCat(role){
+  for(var i=0;i<EQUIP_CAT_ORDER.length;i++){
+    var k=EQUIP_CAT_ORDER[i];
+    if(EQUIP_CATEGORIES[k].roles.indexOf(role)>=0) return k;
+  }
+  return null;
+}
+
+function equipRemarks(row,catKey){
+  var issues=[];
+  var st=row['\u0421\u0442\u0430\u0442\u0443\u0441']||'';
+  if(st==='\u041d\u0435 \u0432 \u0441\u0435\u0442\u0438') issues.push('\u041d\u0435 \u0432 \u0441\u0435\u0442\u0438');
+  if(st==='\u041d\u0435\u0438\u0441\u043f\u0440\u0430\u0432\u043d\u043e') issues.push('\u041d\u0435\u0438\u0441\u043f\u0440\u0430\u0432\u043d\u043e');
+  var cfg=EQUIP_CATEGORIES[catKey];
+  if(cfg){
+    cfg.cols.forEach(function(c){
+      if(!row[c]) issues.push('\u041d\u0435\u0442: '+c);
+    });
+  }
+  return issues;
+}
+
+document.getElementById('equip-drop-zone').addEventListener('dragover',function(e){e.preventDefault();e.currentTarget.classList.add('drag');});
+document.getElementById('equip-drop-zone').addEventListener('dragleave',function(e){e.currentTarget.classList.remove('drag');});
+document.getElementById('equip-drop-zone').addEventListener('drop',function(e){e.preventDefault();e.currentTarget.classList.remove('drag');if(e.dataTransfer.files[0])processEquipFile(e.dataTransfer.files[0]);});
+document.getElementById('equip-fi').addEventListener('change',function(e){if(e.target.files[0])processEquipFile(e.target.files[0]);});
+
+function processEquipFile(file){
+  var wrap=document.getElementById('equip-upload-view');
+  wrap.innerHTML='<div style="text-align:center;padding:80px"><div class="spinner"></div><div style="color:var(--slate);font-size:14px">\u041e\u0431\u0440\u0430\u0431\u0430\u0442\u044b\u0432\u0430\u0435\u043c CSV\u2026</div></div>';
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var csvText=new TextDecoder('utf-8').decode(new Uint8Array(e.target.result));
+      var wb=XLSX.read(csvText,{type:'string'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      var rawHeaders=raw[0];
+      var headers=rawHeaders.map(function(h){return String(h||'').trim();});
+      var rows=raw.slice(1).filter(function(r){return r.some(function(c){return c!=='';});});
+
+      equipData=rows.map(function(r){
+        var obj={};
+        headers.forEach(function(h,i){obj[h]=String(r[i]==null?'':r[i]).trim();});
+        var cat=equipRoleToCat(obj['\u0420\u043e\u043b\u044c']);
+        obj._cat=cat;
+        if(cat){
+          var iss=equipRemarks(obj,cat);
+          obj['\u0417\u0430\u043c\u0435\u0447\u0430\u043d\u0438\u044f']=iss.join('; ');
+          obj._issues=iss.length;
+        } else { obj._issues=0; obj['\u0417\u0430\u043c\u0435\u0447\u0430\u043d\u0438\u044f']=''; }
+        return obj;
+      });
+
+      equipGrouped={};
+      EQUIP_CAT_ORDER.forEach(function(k){equipGrouped[k]=[];});
+      equipData.forEach(function(r){ if(r._cat) equipGrouped[r._cat].push(r); });
+
+      var categorized=equipData.filter(function(r){return r._cat;}).length;
+      if(equipData.length>0 && categorized===0){
+        var roleHeader=headers.indexOf('\u0420\u043e\u043b\u044c')>=0 ? '\u0420\u043e\u043b\u044c \u043d\u0430\u0439\u0434\u0435\u043d\u0430' : '\u0421\u0442\u043e\u043b\u0431\u0435\u0446 "\u0420\u043e\u043b\u044c" \u041d\u0415 \u043d\u0430\u0439\u0434\u0435\u043d';
+        var sampleRole=equipData[0]['\u0420\u043e\u043b\u044c']||'(\u043f\u0443\u0441\u0442\u043e)';
+        var sampleHeaders=headers.slice(0,8).join(', ');
+        document.getElementById('equip-upload-view').innerHTML='<div style="text-align:center;padding:60px 24px;max-width:520px;margin:0 auto">'
+          +'<div style="font-size:36px;margin-bottom:16px">\u26a0</div>'
+          +'<div style="font-weight:600;color:var(--err);margin-bottom:10px">\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u0442\u044c \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u0438</div>'
+          +'<div style="color:var(--slate);font-size:12px;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:var(--mono);line-height:1.7">'
+          +'\u0417\u0430\u043f\u0438\u0441\u0435\u0439 \u0432\u0441\u0435\u0433\u043e: '+equipData.length+'<br/>'
+          +roleHeader+'<br/>'
+          +'\u041f\u0440\u0438\u043c\u0435\u0440 \u0437\u043d\u0430\u0447\u0435\u043d\u0438\u044f \u0420\u043e\u043b\u044c: "'+sampleRole+'"<br/>'
+          +'\u041f\u0435\u0440\u0432\u044b\u0435 \u0441\u0442\u043e\u043b\u0431\u0446\u044b: '+sampleHeaders
+          +'</div>'
+          +'<div style="color:var(--slate);font-size:12px;margin-top:14px">\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e, \u0444\u0430\u0439\u043b \u0432 \u0434\u0440\u0443\u0433\u043e\u0439 \u043a\u043e\u0434\u0438\u0440\u043e\u0432\u043a\u0435 \u0438\u043b\u0438 \u0441\u043e \u0441\u043c\u0435\u0449\u0451\u043d\u043d\u044b\u043c\u0438 \u0440\u0430\u0437\u0434\u0435\u043b\u0438\u0442\u0435\u043b\u044f\u043c\u0438. \u041f\u0440\u0438\u0448\u043b\u0438\u0442\u0435 \u044d\u0442\u043e\u0442 \u044d\u043a\u0440\u0430\u043d \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u0447\u0438\u043a\u0443.</div>'
+          +'<button class="upload-btn" style="margin-top:20px" onclick="location.reload()">\u041f\u043e\u043f\u0440\u043e\u0431\u043e\u0432\u0430\u0442\u044c \u0441\u043d\u043e\u0432\u0430</button></div>';
+        return;
+      }
+
+      document.getElementById('equip-upload-view').style.display='none';
+      document.getElementById('equip-cat-view').style.display='block';
+      renderEquipCategories();
+    }catch(err){
+      document.getElementById('equip-upload-view').innerHTML='<div style="text-align:center;padding:80px">'
+        +'<div style="font-size:36px;margin-bottom:16px">\u26a0</div>'
+        +'<div style="font-weight:600;color:var(--err);margin-bottom:8px">\u041e\u0448\u0438\u0431\u043a\u0430 \u0447\u0442\u0435\u043d\u0438\u044f \u0444\u0430\u0439\u043b\u0430</div>'
+        +'<div style="color:var(--slate);font-size:13px">'+err.message+'</div>'
+        +'<button class="upload-btn" style="margin-top:20px" onclick="location.reload()">\u041f\u043e\u043f\u0440\u043e\u0431\u043e\u0432\u0430\u0442\u044c \u0441\u043d\u043e\u0432\u0430</button></div>';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function clickEquipCard(el){ showEquipCat(el.getAttribute('data-cat')); }
+
+function renderEquipCategories(){
+  var total=equipData.length;
+  var withIssues=equipData.filter(function(r){return r._issues>0;}).length;
+  var offline=equipData.filter(function(r){return r['\u0421\u0442\u0430\u0442\u0443\u0441']==='\u041d\u0435 \u0432 \u0441\u0435\u0442\u0438'||r['\u0421\u0442\u0430\u0442\u0443\u0441']==='\u041d\u0435\u0438\u0441\u043f\u0440\u0430\u0432\u043d\u043e';}).length;
+
+  document.getElementById('equip-global-kpi').innerHTML=[
+    {v:total,l:'\u0412\u0441\u0435\u0433\u043e \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432',c:''},
+    {v:EQUIP_CAT_ORDER.length,l:'\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u0439',c:''},
+    {v:withIssues,l:'\u0421 \u0437\u0430\u043c\u0435\u0447\u0430\u043d\u0438\u044f\u043c\u0438',c:withIssues?'warn':''},
+    {v:offline,l:'\u041d\u0435 \u0432 \u0441\u0435\u0442\u0438 / \u043d\u0435\u0438\u0441\u043f\u0440\u0430\u0432\u043d\u043e',c:offline?'err':''},
+    {v:pct(total-withIssues,total)+'%',l:'\u0417\u0430\u043f\u043e\u043b\u043d\u0435\u043d\u043d\u043e\u0441\u0442\u044c',c:''},
+  ].map(function(k){return '<div class="dkpi"><div class="dkpi-v '+k.c+'">'+k.v+'</div><div class="dkpi-l">'+k.l+'</div></div>';}).join('');
+
+  document.getElementById('equip-cats-lbl').textContent=total+' \u0437\u0430\u043f\u0438\u0441\u0435\u0439 \u0432\u0441\u0435\u0433\u043e';
+
+  document.getElementById('equip-cat-cards').innerHTML=EQUIP_CAT_ORDER.map(function(k){
+    var cfg=EQUIP_CATEGORIES[k];
+    var rows=equipGrouped[k]||[];
+    var iss=rows.filter(function(r){return r._issues>0;}).length;
+    var compl=pct(rows.length-iss,rows.length||1);
+    var issColor=iss===0?'var(--ok)':iss>rows.length*0.3?'var(--err)':'var(--warn)';
+    var complColor=compl===100?'var(--ok)':compl>70?'var(--warn)':'var(--err)';
+    return '<div class="div-card'+(iss>0?' has-issues':'')+'" data-cat="'+k+'" onclick="clickEquipCard(this)">'
+      +'<div class="div-name" style="font-size:15px">'+cfg.label+'</div>'
+      +'<div class="div-meta">'+rows.length+' \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432</div>'
+      +'<div class="div-row"><span class="div-row-lbl">\u0417\u0430\u043c\u0435\u0447\u0430\u043d\u0438\u0439</span><span class="div-row-val" style="color:'+issColor+'">'+iss+'</span></div>'
+      +'<div class="div-bar"><div class="div-bar-fill" style="width:'+pct(iss,rows.length||1)+'%;background:'+issColor+'"></div></div>'
+      +'<div class="div-row" style="margin-top:10px"><span class="div-row-lbl">\u0417\u0430\u043f\u043e\u043b\u043d\u0435\u043d\u043d\u043e\u0441\u0442\u044c</span><span class="div-row-val" style="color:'+complColor+'">'+compl+'%</span></div>'
+      +'<div class="div-bar"><div class="div-bar-fill" style="width:'+compl+'%;background:'+complColor+'"></div></div>'
+      +'</div>';
+  }).join('');
+}
+
+function showEquipCat(k){
+  curEquipCat=k; equipShowIssuesOnly=false; equipSortCol=null;
+  document.getElementById('equip-issues-btn').classList.remove('active');
+  document.getElementById('equip-search').value='';
+  var cfg=EQUIP_CATEGORIES[k];
+  var rows=equipGrouped[k]||[];
+  var iss=rows.filter(function(r){return r._issues>0;}).length;
+  document.getElementById('equip-detail-name').textContent=cfg.label;
+  document.getElementById('equip-detail-kpi').innerHTML=[
+    {v:rows.length,l:'\u0412\u0441\u0435\u0433\u043e',c:''},
+    {v:iss,l:'\u0421 \u0437\u0430\u043c\u0435\u0447\u0430\u043d\u0438\u044f\u043c\u0438',c:iss?'warn':''},
+    {v:pct(rows.length-iss,rows.length||1)+'%',l:'\u0417\u0430\u043f\u043e\u043b\u043d\u0435\u043d\u043d\u043e\u0441\u0442\u044c',c:''},
+  ].map(function(x){return '<div class="dkpi"><div class="dkpi-v '+x.c+'">'+x.v+'</div><div class="dkpi-l">'+x.l+'</div></div>';}).join('');
+  document.getElementById('equip-cat-view').style.display='none';
+  document.getElementById('equip-detail-view').style.display='block';
+  renderEquipTable();
+}
+
+function showEquipCatList(){
+  curEquipCat=null;
+  document.getElementById('equip-cat-view').style.display='block';
+  document.getElementById('equip-detail-view').style.display='none';
+  renderEquipCategories();
+}
+
+function toggleEquipIssues(){
+  equipShowIssuesOnly=!equipShowIssuesOnly;
+  document.getElementById('equip-issues-btn').classList.toggle('active',equipShowIssuesOnly);
+  renderEquipTable();
+}
+
+function clickEquipHeader(el){ equipDoSort(el.getAttribute('data-col')); }
+function equipDoSort(col){
+  if(equipSortCol===col) equipSortDesc=!equipSortDesc; else{equipSortCol=col;equipSortDesc=false;}
+  renderEquipTable();
+}
+
+function renderEquipTable(){
+  if(!curEquipCat)return;
+  var cfg=EQUIP_CATEGORIES[curEquipCat];
+  var rows=equipGrouped[curEquipCat]||[];
+  var s=(document.getElementById('equip-search').value||'').toLowerCase();
+  if(equipShowIssuesOnly) rows=rows.filter(function(r){return r._issues>0;});
+  if(s) rows=rows.filter(function(r){return Object.keys(r).some(function(k){return String(r[k]).toLowerCase().indexOf(s)>=0;});});
+  document.getElementById('equip-row-count').textContent=rows.length+' \u0437\u0430\u043f\u0438\u0441\u0435\u0439';
+
+  var baseCols=['\u0418\u043c\u044f','\u041f\u043b\u043e\u0449\u0430\u0434\u043a\u0430','\u0421\u0442\u0430\u0442\u0443\u0441','\u041f\u0440\u043e\u0438\u0437\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c','\u0422\u0438\u043f'];
+  var cols=baseCols.concat(cfg.cols).concat(['\u0417\u0430\u043c\u0435\u0447\u0430\u043d\u0438\u044f']);
+
+  if(equipSortCol){
+    rows=rows.slice().sort(function(a,b){
+      var r=String(a[equipSortCol]||'').localeCompare(String(b[equipSortCol]||''),'ru',{numeric:true});
+      return equipSortDesc?-r:r;
+    });
+  }
+
+  var thead=cols.map(function(c){
+    var sorted=equipSortCol===c;
+    return '<th class="'+(sorted?'sorted':'')+' '+(sorted&&equipSortDesc?'desc':'')+'" data-col="'+c+'" onclick="clickEquipHeader(this)">'+c+'</th>';
+  }).join('');
+
+  var tbody=rows.slice(0,800).map(function(r){
+    var cls=r._issues>=2?'rerr':r._issues>0?'rwarn':'';
+    var st=r['\u0421\u0442\u0430\u0442\u0443\u0441']||'';
+    var stCls=st==='\u0410\u043a\u0442\u0438\u0432\u043d\u044b\u0439'?'status-active':(st==='\u041d\u0435 \u0432 \u0441\u0435\u0442\u0438'||st==='\u041d\u0435\u0438\u0441\u043f\u0440\u0430\u0432\u043d\u043e')?'status-off':'status-other';
+    var cells=cols.map(function(c){
+      var v=r[c]||'';
+      if(c==='\u0417\u0430\u043c\u0435\u0447\u0430\u043d\u0438\u044f') return v?'<td><span class="badge '+(r._issues>=2?'berr':'bwarn')+'">'+v+'</span></td>':'<td></td>';
+      if(c==='\u0421\u0442\u0430\u0442\u0443\u0441') return '<td class="'+stCls+'" style="font-weight:600">'+(v||'\u2014')+'</td>';
+      if(c==='IP-\u0430\u0434\u0440\u0435\u0441') return '<td class="'+(v?'ip':'miss')+'">'+(v||'\u2014')+'</td>';
+      if(c==='\u0418\u043c\u044f') return '<td class="sw" title="'+v+'">'+v+'</td>';
+      if(c==='\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440') return '<td class="'+(v?'mono':'miss')+'" style="font-size:11px">'+(v||'\u2014')+'</td>';
+      return '<td title="'+v+'">'+(v||'\u2014')+'</td>';
+    }).join('');
+    return '<tr class="'+cls+'">'+cells+'</tr>';
+  }).join('');
+
+  document.getElementById('equip-detail-table').innerHTML='<table><thead><tr>'+thead+'</tr></thead><tbody>'+tbody+'</tbody></table>';
+  if(rows.length>800) document.getElementById('equip-row-count').textContent+=' (\u043f\u043e\u043a\u0430\u0437\u0430\u043d\u043e 800)';
+}
+
+function exportEquipCurrent(){
+  if(!curEquipCat)return;
+  var cfg=EQUIP_CATEGORIES[curEquipCat];
+  var rows=equipGrouped[curEquipCat]||[];
+  var s=(document.getElementById('equip-search').value||'').toLowerCase();
+  if(equipShowIssuesOnly) rows=rows.filter(function(r){return r._issues>0;});
+  if(s) rows=rows.filter(function(r){return Object.keys(r).some(function(k){return String(r[k]).toLowerCase().indexOf(s)>=0;});});
+  var baseCols=['\u0418\u043c\u044f','\u041f\u043b\u043e\u0449\u0430\u0434\u043a\u0430','\u0421\u0442\u0430\u0442\u0443\u0441','\u041f\u0440\u043e\u0438\u0437\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c','\u0422\u0438\u043f'];
+  var cols=baseCols.concat(cfg.cols).concat(['\u0417\u0430\u043c\u0435\u0447\u0430\u043d\u0438\u044f']);
+  var data=[cols].concat(rows.map(function(r){return cols.map(function(c){return r[c]||'';});}));
+  var ws=XLSX.utils.aoa_to_sheet(data);
+  var colW=data.reduce(function(acc,row){row.forEach(function(v,i){acc[i]=Math.max(acc[i]||8,String(v).length+2);});return acc;},[]);
+  ws['!cols']=colW.map(function(w){return{wch:Math.min(w,50)};});
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,cfg.label.slice(0,28));
+  XLSX.writeFile(wb,cfg.label.replace(/[\\/]/g,'-')+'_'+dateStr()+'.xlsx');
+}
+
 // ══ PROGRESS SECTION ═════════════════════════════════════════════════════════
 function renderProgressSection(){
   const el=document.getElementById('prog-content');
@@ -1465,7 +1980,9 @@ function printCard(){
   const r=(lbl,v,mono)=>v
     ?'<tr><td>'+lbl+'</td><td'+(mono?' style="font-family:monospace"':'')+'>'+v+'</td></tr>'
     :'<tr><td>'+lbl+'</td><td style="color:#aaa;font-style:italic">—</td></tr>';
-  const w=window.open('','_blank','width=720,height=960');
+  let w;
+  try{ w=window.open('','_blank','width=720,height=960'); }
+  catch(e){ alert('Печать недоступна в этом окне предпросмотра. Откройте файл напрямую в браузере.'); return; }
   if(!w)return;
   w.document.write('<!DOCTYPE html><html lang="ru"><head>'
     +'<meta charset="UTF-8"/><title>Карточка — '+cardSw+'</title>'
@@ -1519,6 +2036,9 @@ function applyHash(){
   if(hash==='dupes'){switchView('dupes');return;}
   if(hash==='objects'){switchView('objects');return;}
   if(hash==='dashboard'||hash===''){switchView('dashboard');return;}
+  if(hash==='divs'){switchView('divs');return;}
+  var divKeys=Object.keys(DIV_MAP);
+  for(var di=0;di<divKeys.length;di++){var dv=divKeys[di];if(hash===dv.replace(/ /g,'')){switchView('divs');showDivDetail(dv);return;}}
   for(const [mag] of Object.entries(grouped)){
     const label=(prefixMap[mag]||'MAG')+mag;
     if(hash===label||hash===mag){switchView('objects');showMag(mag);return;}
@@ -1538,7 +2058,7 @@ async function copyObjectLink(){
 // ══ TICKET GENERATION ════════════════════════════════════════════════════════
 function ticketHeader(subj){
   const date=new Date().toLocaleDateString('ru-RU');
-  return ['Обращение на обогощение отчета',
+  return ['Заявка на обогащение PowerBI отчета',
     `Дата: ${date}`,'Тема: '+subj,'','Здравствуйте!',''].join('\n');
 }
 
@@ -1547,7 +2067,7 @@ function generateTicket(mag,sw){
   if(!row||!row._issues)return;
   const lines=[
     ticketHeader('Актуализация данных — коммутатор '+sw),
-    'В ходе проверки PowerBI выявлены неполные данные',
+    'В ходе проверки PowerBI отчета выявлены неполные данные',
     'по сетевому оборудованию. Прошу предоставить недостающую информацию.',
     '','─────────────────────────────────────────',
     'Объект:       '+objLabel(mag),
@@ -1569,7 +2089,7 @@ function generateBatchTicket(mag){
   const label=objLabel(mag);
   const lines=[
     ticketHeader('Актуализация данных — объект '+label),
-    'По результатам проверки отчета PowerBI на объекте '+label,
+    'По результатам проверки инвентаризационной базы на объекте '+label,
     'выявлено '+rows.length+' коммутатор(а/ов) с неполными данными.',
     'Прошу предоставить недостающую информацию по каждому устройству.',
     '','═════════════════════════════════════════',
@@ -1583,6 +2103,7 @@ function generateBatchTicket(mag){
     r['Замечания'].split('; ').forEach(m=>lines.push('     ✗ '+m));
     if(i<rows.length-1)lines.push('');
   });
+  lines.push('═════════════════════════════════════════','',
   showTicketModal(lines.join('\n'),'Заявка — '+label+' ('+rows.length+' устройств)',rows.length);
 }
 
